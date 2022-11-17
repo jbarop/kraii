@@ -10,11 +10,13 @@ repositories {
 dependencies {
   implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
   implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+
+  implementation("org.jetbrains.kotlin:kotlin-gradle-plugin-api") // compileOnly ?
 }
 
 gradlePlugin {
-  val greeting by plugins.creating {
+  val kraii by plugins.creating {
     id = "kraii-gradle-plugin"
-    implementationClass = "kraii.KraiiPlugin"
+    implementationClass = "kraii.KraiiKotlinCompilerGradlePlugin"
   }
 }
