@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.util.dump
+import org.jetbrains.kotlin.resolve.extensions.SyntheticResolveExtension
 
 class KraiiComponentRegistrar : ComponentRegistrar {
 
@@ -20,18 +21,7 @@ class KraiiComponentRegistrar : ComponentRegistrar {
   ) {
     val messageCollector = configuration.get(MESSAGE_COLLECTOR_KEY, NONE)
     messageCollector.report(INFO, "kRAII Kotlin plugin active")
+    SyntheticResolveExtension.registerExtension(project, KraiiSyntheticResolveExtension())
     IrGenerationExtension.registerExtension(project, KraiiIrGenerationExtension(messageCollector))
   }
-}
-
-class KraiiIrGenerationExtension(
-  private val messageCollector: MessageCollector,
-) : IrGenerationExtension {
-  override fun generate(
-    moduleFragment: IrModuleFragment,
-    pluginContext: IrPluginContext,
-  ) {
-    messageCollector.report(INFO, moduleFragment.dump())
-  }
-
 }

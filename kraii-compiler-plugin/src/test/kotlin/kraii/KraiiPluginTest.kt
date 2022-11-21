@@ -13,9 +13,12 @@ class KraiiPluginTest {
     val source = SourceFile.kotlin(
       name = "main.kt",
       contents = """
-        fun helloWorld() = "Hello, World!"
+        class ExternalResource
+        
         fun main() {
-          println(helloWorld())
+          ExternalResource().use {
+              println("Hello")
+          }
         }
         """.trimIndent()
     )

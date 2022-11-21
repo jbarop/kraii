@@ -1,12 +1,9 @@
 package kraii.sample
 
-class App {
-  val greeting: String
-    get() {
-      return "Hello World!"
-    }
-}
+class ExternalResource
 
 fun main() {
-  println(App().greeting)
+  ExternalResource().use {
+    println("Hello world from Source Code!")
+  }
 }
