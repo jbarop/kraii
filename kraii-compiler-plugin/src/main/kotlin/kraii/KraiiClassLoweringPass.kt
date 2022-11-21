@@ -33,6 +33,7 @@ class KraiiClassLoweringPass(
     if (thisCloseFunction.body != null) return
     val propertiesToClose = irClass.properties
       .filter { it.instanceOfAutoClosable() }
+      .toList().reversed()
 
     thisCloseFunction.irBlockBody {
       propertiesToClose.forEach { propertyToClose ->
