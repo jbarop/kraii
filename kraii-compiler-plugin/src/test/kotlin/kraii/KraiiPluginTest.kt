@@ -13,11 +13,27 @@ class KraiiPluginTest {
     val source = SourceFile.kotlin(
       name = "main.kt",
       contents = """
-        class ExternalResource
+        import kotlin.io.path.createTempFile
+        import kotlin.io.path.deleteExisting
+        
+        class ExternalResource : AutoCloseable {
+        
+          private val tempFile = createTempFile()
+        
+          override fun close(){
+            tempFile.deleteExisting()
+          }
+        }
+        
+        class ResourceManager : AutoCloseable {
+          private val someThing = "some thing"
+          private val firstResource = ExternalResource()
+          private val secondResource = ExternalResource()
+        }
         
         fun main() {
-          ExternalResource().use {
-              println("Hello")
+          ResourceManager().use {
+            println("Hello world from Source Code!")
           }
         }
         """.trimIndent()
