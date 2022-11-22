@@ -1,0 +1,25 @@
+name: Run Sample
+
+on:
+  push
+
+jobs:
+  run-sample:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: sample
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Run Sample
+        run: ./gradlew run
