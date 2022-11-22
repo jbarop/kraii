@@ -1,0 +1,20 @@
+<idea-plugin>
+  <id>org.jetbrains.plugins.template</id>
+  <name>KRAII - Kotlin Resource Acquisition Is Initialization</name>
+  <description><![CDATA[
+Provides support for the kraii-compiler-plugin.
+]]></description>
+  <vendor
+    url="https://www.codecentric.de"
+    email="johannes.barop@codecentric.de">
+    Johannes Barop (codecentric AG)
+  </vendor>
+
+  <idea-version since-build="213"/>
+  <depends>org.jetbrains.kotlin</depends>
+
+  <extensions defaultExtensionNs="org.jetbrains.kotlin">
+    <syntheticResolveExtension implementation="kraii.KraiiSyntheticResolveExtension" order="first"/>
+  </extensions>
+
+</idea-plugin>
