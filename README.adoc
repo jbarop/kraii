@@ -96,6 +96,14 @@ Also, worth mentioning is that the order of release was exactly the opposite to 
 
 == Caveats
 
-This is a proof of concept and cannot be used productively in its current state. The plugin has not been extensively tested nor released. No edge cases like inheritance have been considered and there is no error handling at all.
+This is a proof of concept and cannot be used productively in its current state. The plugin has not been extensively tested nor released.
+
+* There is no error handling.
+
+* The compiler plugin overwrites an existing `close` method. The existing logic should be merged with the generated method.
+
+* The compiler plugin simply searches for properties that implement `AutoClosable`. However, this is too simplistic. References are passed on to other objects. Resources should only be released where they were created in the first place.
+
+* Dynamic structures like collections should be supported.
 
 If you are interested in this topic, I would be very happy to hear from you.
