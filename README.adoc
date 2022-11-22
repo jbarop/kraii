@@ -11,13 +11,13 @@ However, we have limited influence on how and when.
 But how do we handle non-heap resources such as files, socket connections, or even hardware?
 How should the garbage collector evaluate whether the graphics card still has enough free memory?
 
-We are unable to use "`java.lang.Object.finalize()`".
+We are unable to use `java.lang.Object.finalize()`.
 The finalization mechanism is problematic and marked as deprecated.
 There are no guarantees about the order and timing of finalization.
 The finalize method may not be called until after an indefinite delay, if at all.
-The documentation points out that non-heap resources should be released by implementing "`java.lang.AutoClosable`".
+The documentation points out that non-heap resources should be released by implementing `java.lang.AutoClosable`.
 
-Java ("`try (var r = new Resource()) { ... }`") and Kotlin ("`Resource().use { ... }`") provide tools to automatically close or release instances of "`AutoClosable`".
+Java (`try (var r = new Resource()) { ... }`) and Kotlin (`Resource().use { ... }`) provide tools to automatically close or release instances of `AutoClosable`.
 However, this is limited to the scope of a single function.
 If we have many non-heap resources associated with the lifecycle of objects, then they need to be released explicitly.
 This is error-prone and can lead to leaks.
@@ -90,7 +90,7 @@ Hello World!
 /tmp/13763347389405974484.tmp has been deleted.
 ----
 
-The two temporary files were removed automatically, because generated "`ResourceManager.close()`" function called "`firstResource.close()`" and "`secondResource.close()`".
+The two temporary files were removed automatically, because generated `ResourceManager.close()` function called `firstResource.close()` and `secondResource.close()`.
 
 Also, worth mentioning is that the order of release was exactly the opposite to the initialization. Resources can be dependent on each other.
 
