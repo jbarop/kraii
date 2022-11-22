@@ -1,0 +1,101 @@
+= kraii - Kotlin Resource Acquisition Is Initialization
+
+*Proof Of Concept* to implement the RAII pattern in Kotlin using a compiler plugin.
+
+== Motivation
+
+Java utilizes garbage collection for memory management.
+When an object is no longer needed, it is automatically freed at some point.
+However, we have limited influence on how and when.
+
+But how do we handle non-heap resources such as files, socket connections, or even hardware?
+How should the garbage collector evaluate whether the graphics card still has enough free memory?
+
+We are unable to use "`java.lang.Object.finalize()`".
+The finalization mechanism is problematic and marked as deprecated.
+There are no guarantees about the order and timing of finalization.
+The finalize method may not be called until after an indefinite delay, if at all.
+The documentation points out that non-heap resources should be released by implementing "`java.lang.AutoClosable`".
+
+Java ("`try (var r = new Resource()) { ... }`") and Kotlin ("`Resource().use { ... }`") provide tools to automatically close or release instances of "`AutoClosable`".
+However, this is limited to the scope of a single function.
+If we have many non-heap resources associated with the lifecycle of objects, then they need to be released explicitly.
+This is error-prone and can lead to leaks.
+
+"Resource Acquisition Is Initialization" (RAII) is a resource management strategy invented by Bjarne Stroustrup for C++. Here, each object is responsible for managing its own resources. Thus, this mechanism ensures that any resources are released as early as possible.
+
+== Example
+
+=== Running the Sample
+[source,bash]
+----
+git clone git@github.com:jbarop/kraii.git
+cd sample
+./gradlew run
+----
+
+=== Code
+
+[source,kotlin]
+----
+/**
+ * A temporary file as example for a non-heap resource.
+ */
+class ExternalResource : AutoCloseable {
+
+  private val tempFile = createTempFile()
+
+  init {
+    println("$tempFile has been created.")
+  }
+
+  /**
+   * The implementation of [AutoCloseable.close] is
+   * responsible for freeing the resource. In this
+   * case the file needs to be removed.
+   */
+  override fun close(){
+    tempFile.deleteExisting()
+    println("$tempFile has been deleted.")
+  }
+}
+
+/**
+ * An 'complex' object which uses other resources.
+ *
+ * It extends the [AutoCloseable] interface, but does
+ * implement [AutoCloseable.close]. This is done
+ * automatically by the compiler plugin.
+ */
+class ResourceManager : AutoCloseable {
+  private val firstResource = ExternalResource()
+  private val secondResource = ExternalResource()
+}
+
+fun main() {
+  ResourceManager().use {
+    println("Hello World!")
+  }
+}
+----
+
+=== Output
+
+[text]
+----
+/tmp/13763347389405974484.tmp has been created.
+/tmp/3245136265152033692.tmp has been created.
+Hello World!
+/tmp/3245136265152033692.tmp has been deleted.
+/tmp/13763347389405974484.tmp has been deleted.
+----
+
+The two temporary files were removed automatically, because generated "`ResourceManager.close()`" function called "`firstResource.close()`" and "`secondResource.close()`".
+
+Also, worth mentioning is that the order of release was exactly the opposite to the initialization. Resources can be dependent on each other.
+
+== Caveats
+
+This is a proof of concept and cannot be used productively in its current state. The plugin has not been extensively tested nor released. No edge cases like inheritance have been considered and there is no error handling at all.
+
+If you are interested in this topic, I would be very happy to hear from you.
