@@ -13,6 +13,7 @@ class KraiiPluginTest {
     val source = SourceFile.kotlin(
       name = "main.kt",
       contents = """
+        import kraii.api.Scoped
         import kotlin.io.path.createTempFile
         import kotlin.io.path.deleteExisting
         
@@ -26,9 +27,14 @@ class KraiiPluginTest {
         }
         
         class ResourceManager : AutoCloseable {
-          private val someThing = "some thing"
+        
+          @Scoped
           private val firstResource = ExternalResource()
+        
+          @Scoped
           private val secondResource = ExternalResource()
+        
+          private val unscopedResource = ExternalResource()
         }
         
         fun main() {

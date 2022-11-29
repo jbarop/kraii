@@ -7,6 +7,11 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameOrNull
 import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperInterfaces
 
+val scopedClassId = ClassId(
+  FqName("kraii.api"),
+  Name.identifier("Scoped")
+)
+
 /**
  * Full class name of [AutoCloseable].
  */

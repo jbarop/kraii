@@ -1,5 +1,6 @@
 package kraii.sample
 
+import kraii.api.Scoped
 import kotlin.io.path.createTempFile
 import kotlin.io.path.deleteExisting
 
@@ -34,8 +35,14 @@ class ExternalResource : AutoCloseable {
  * automatically by the compiler plugin.
  */
 class ResourceManager : AutoCloseable {
+
+  @Scoped
   private val firstResource = ExternalResource()
+
+  @Scoped
   private val secondResource = ExternalResource()
+
+  private val unscopedResource = ExternalResource()
 }
 
 fun main() {

@@ -68,14 +68,14 @@ class ExternalResource : AutoCloseable {
  * automatically by the compiler plugin.
  */
 class ResourceManager : AutoCloseable {
-  private val firstResource = ExternalResource()
-  private val secondResource = ExternalResource()
-}
 
-fun main() {
-  ResourceManager().use {
-    println("Hello World!")
-  }
+  @Scoped
+  private val firstResource = ExternalResource()
+
+  @Scoped
+  private val secondResource = ExternalResource()
+
+  private val unscopedResource = ExternalResource()
 }
 ----
 
@@ -85,6 +85,7 @@ fun main() {
 ----
 /tmp/13763347389405974484.tmp has been created.
 /tmp/3245136265152033692.tmp has been created.
+/tmp/1281616729360835633.tmp has been created.
 Hello World!
 /tmp/3245136265152033692.tmp has been deleted.
 /tmp/13763347389405974484.tmp has been deleted.

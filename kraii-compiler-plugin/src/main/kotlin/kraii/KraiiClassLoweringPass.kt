@@ -15,7 +15,6 @@ import org.jetbrains.kotlin.ir.descriptors.toIrBasedDescriptor
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin.GET_PROPERTY
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.getClass
-import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.ir.util.superTypes
@@ -33,6 +32,11 @@ class KraiiClassLoweringPass(
     if (thisCloseFunction.body != null) return
     val propertiesToClose = irClass.properties
       .filter { it.instanceOfAutoClosable() }
+      .filter {
+        it.annotations.any { annotationCall ->
+          annotationCall.type.classFqName == scopedClassId.asSingleFqName()
+        }
+      }
       .toList().reversed()
 
     thisCloseFunction.irBlockBody {

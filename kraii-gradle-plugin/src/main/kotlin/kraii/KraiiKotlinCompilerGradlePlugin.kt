@@ -28,6 +28,10 @@ class KraiiKotlinCompilerGradlePlugin : KotlinCompilerPluginSupportPlugin {
       /* name = */ "kraii",
       /* type = */ KraiiGradleExtension::class.java,
     )
+
+    val apiDependency = target.dependencies.create("kraii:kraii-api:0.0.1")
+    val compileOnlyConfiguration = target.configurations.getByName("compileOnly")
+    compileOnlyConfiguration.dependencies.add(apiDependency)
   }
 
   override fun applyToCompilation(
