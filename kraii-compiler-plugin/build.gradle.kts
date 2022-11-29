@@ -1,6 +1,5 @@
 plugins {
-  `java-gradle-plugin`
-  id("org.jetbrains.kotlin.jvm") version "1.7.21"
+  kotlin("jvm")
 }
 
 repositories {
@@ -8,8 +7,6 @@ repositories {
 }
 
 dependencies {
-  implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
-
   compileOnly("org.jetbrains.kotlin:kotlin-compiler-embeddable")
 
   testImplementation("org.jetbrains.kotlin:kotlin-test")
