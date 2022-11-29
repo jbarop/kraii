@@ -3,10 +3,6 @@ plugins {
   id("org.jetbrains.intellij") version "1.10.0"
 }
 
-repositories {
-  mavenCentral()
-}
-
 dependencies {
   implementation(project(":kraii-compiler-plugin"))
 }

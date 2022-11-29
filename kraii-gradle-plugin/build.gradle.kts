@@ -3,10 +3,6 @@ plugins {
   kotlin("jvm")
 }
 
-repositories {
-  mavenCentral()
-}
-
 dependencies {
   compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin-api")
 }
