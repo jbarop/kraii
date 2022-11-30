@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class KraiiPluginTest {
 
   @Test
-  fun `should compile`() {
+  fun `should close resources which are annotated with scope`() {
     val result = compileAndRunTest(
       """
         import kraii.api.Scoped
@@ -20,20 +20,39 @@ class KraiiPluginTest {
         
           @Scoped
           private val secondResource = CountingResource()
-        
-          private val unscopedResource = CountingResource()
         }
         
         fun testMain() {
-          ResourceManager().use {
-            println("Hello world from Source Code!")
-          }
+          ResourceManager().close()
         }
       """.trimIndent()
     )
 
-    assertThat(result.numInitialized).isEqualTo(3)
+    assertThat(result.numInitialized).isEqualTo(2)
     assertThat(result.numClosed).isEqualTo(2)
+  }
+
+  @Test
+  fun `should not close resources which are not annotated with scope`() {
+    val result = compileAndRunTest(
+      """
+        import kraii.util.CountingResource
+        
+        class ResourceManager : AutoCloseable {
+        
+          private val firstResource = CountingResource()
+        
+          private val secondResource = CountingResource()
+        }
+        
+        fun testMain() {
+          ResourceManager().close()
+        }
+      """.trimIndent()
+    )
+
+    assertThat(result.numInitialized).isEqualTo(2)
+    assertThat(result.numClosed).isEqualTo(0)
   }
 
 }
