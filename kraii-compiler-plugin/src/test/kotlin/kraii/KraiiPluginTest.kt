@@ -1,58 +1,39 @@
 package kraii
 
-import com.tschuchort.compiletesting.KotlinCompilation
-import com.tschuchort.compiletesting.SourceFile
-import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
-import org.junit.Test
-import kotlin.test.assertEquals
+import kraii.util.compileAndRunTest
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
 
 class KraiiPluginTest {
 
   @Test
   fun `should compile`() {
-    val source = SourceFile.kotlin(
-      name = "main.kt",
-      contents = """
+    val result = compileAndRunTest(
+      """
         import kraii.api.Scoped
-        import kotlin.io.path.createTempFile
-        import kotlin.io.path.deleteExisting
-        
-        class ExternalResource : AutoCloseable {
-        
-          private val tempFile = createTempFile()
-        
-          override fun close(){
-            tempFile.deleteExisting()
-          }
-        }
+        import kraii.util.CountingResource
         
         class ResourceManager : AutoCloseable {
         
           @Scoped
-          private val firstResource = ExternalResource()
+          private val firstResource = CountingResource()
         
           @Scoped
-          private val secondResource = ExternalResource()
+          private val secondResource = CountingResource()
         
-          private val unscopedResource = ExternalResource()
+          private val unscopedResource = CountingResource()
         }
         
-        fun main() {
+        fun testMain() {
           ResourceManager().use {
             println("Hello world from Source Code!")
           }
         }
-        """.trimIndent()
+      """.trimIndent()
     )
 
-    val result = KotlinCompilation().apply {
-      sources = listOf(source)
-      useIR = true
-      compilerPlugins = listOf<ComponentRegistrar>(KraiiComponentRegistrar())
-      inheritClassPath = true
-    }.compile()
-
-    assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+    assertThat(result.numInitialized).isEqualTo(3)
+    assertThat(result.numClosed).isEqualTo(2)
   }
 
 }
