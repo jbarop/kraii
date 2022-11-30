@@ -7,19 +7,19 @@ import org.junit.jupiter.api.Test
 class KraiiPluginTest {
 
   @Test
-  fun `should close resources which are annotated with scope`() {
+  fun `should close resources which are annotated with @Scoped`() {
     val result = compileAndRunTest(
       """
         import kraii.api.Scoped
         import kraii.util.CountingResource
         
-        class ResourceManager : AutoCloseable {
+        class Root : AutoCloseable {
           @Scoped
           private val resource = CountingResource("resource")
         }
         
         fun testMain() {
-          ResourceManager().close()
+          Root().close()
         }
       """.trimIndent()
     )
@@ -29,17 +29,17 @@ class KraiiPluginTest {
   }
 
   @Test
-  fun `should not close resources which are not annotated with scope`() {
+  fun `should not close resources which are not annotated with @Scoped`() {
     val result = compileAndRunTest(
       """
         import kraii.util.CountingResource
         
-        class ResourceManager : AutoCloseable {
+        class Root : AutoCloseable {
           private val resource = CountingResource("resource")
         }
         
         fun testMain() {
-          ResourceManager().close()
+          Root().close()
         }
       """.trimIndent()
     )
