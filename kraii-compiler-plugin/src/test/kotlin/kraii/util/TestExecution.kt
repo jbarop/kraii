@@ -8,14 +8,14 @@ import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
 data class TestExecutionResult(
 
   /**
-   * How many times [CountingResource] was initialized.
+   * Names of the [CountingResource]s which were initialized.
    */
-  val numInitialized: Int,
+  val initialized: List<String>,
 
   /**
-   * How many times [CountingResource] was closed.
+   * Names of the [CountingResource]s which were closed.
    */
-  val numClosed: Int,
+  val closed: List<String>,
 )
 
 /**
@@ -32,8 +32,7 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult =
       
       fun main() {
         testMain()
-        println("numInitialized=" + CountingResource.numInitialized)
-        println("numClosed=" + CountingResource.numClosed)
+        println(CountingResource.serialize())
       }
       """.trimIndent()
     ),
@@ -62,7 +61,6 @@ private fun KotlinCompilation.Result.runTest(): TestExecutionResult {
   val javaExecutable = ProcessHandle.current().info().command().get()
   val classPath = System.getProperty("java.class.path")
     .split(":")
-    .filter { it.contains("kraii") || it.contains("kotlin-stdlib") }
     .plus(outputDirectory)
     .joinToString(":")
   val process = ProcessBuilder(javaExecutable, "-cp", classPath, "MainKt").start()
@@ -77,15 +75,9 @@ private fun KotlinCompilation.Result.runTest(): TestExecutionResult {
 
 private fun Process.parseTestExecutionResult(): TestExecutionResult {
   val lines = inputStream.bufferedReader().readLines()
+  val countingResourceStatus = CountingResource.deserialize(lines)
   return TestExecutionResult(
-    numInitialized = lines.parse("numInitialized"),
-    numClosed = lines.parse("numClosed"),
+    initialized = countingResourceStatus.initialized,
+    closed = countingResourceStatus.closed,
   )
-}
-
-private fun List<String>.parse(property: String): Int {
-  val line = find { it.startsWith("$property=") } ?: error("'$property' not found in output.")
-  val split = line.split("=")
-  if (split.size != 2) error("Cannot parse '$line'.")
-  return split[1].toIntOrNull() ?: error("Cannot parse number from '$line'.")
 }

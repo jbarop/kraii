@@ -14,12 +14,8 @@ class KraiiPluginTest {
         import kraii.util.CountingResource
         
         class ResourceManager : AutoCloseable {
-        
           @Scoped
-          private val firstResource = CountingResource()
-        
-          @Scoped
-          private val secondResource = CountingResource()
+          private val resource = CountingResource("resource")
         }
         
         fun testMain() {
@@ -28,8 +24,8 @@ class KraiiPluginTest {
       """.trimIndent()
     )
 
-    assertThat(result.numInitialized).isEqualTo(2)
-    assertThat(result.numClosed).isEqualTo(2)
+    assertThat(result.initialized).isEqualTo(listOf("resource"))
+    assertThat(result.closed).isEqualTo(listOf("resource"))
   }
 
   @Test
@@ -39,10 +35,7 @@ class KraiiPluginTest {
         import kraii.util.CountingResource
         
         class ResourceManager : AutoCloseable {
-        
-          private val firstResource = CountingResource()
-        
-          private val secondResource = CountingResource()
+          private val resource = CountingResource("resource")
         }
         
         fun testMain() {
@@ -51,8 +44,55 @@ class KraiiPluginTest {
       """.trimIndent()
     )
 
-    assertThat(result.numInitialized).isEqualTo(2)
-    assertThat(result.numClosed).isEqualTo(0)
+    assertThat(result.initialized).isEqualTo(listOf("resource"))
+    assertThat(result.closed).isEqualTo(emptyList<String>())
+  }
+
+  @Test
+  fun `should close resources in reverse order than the declaration`() {
+    val result = compileAndRunTest(
+      """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        
+        class Root : AutoCloseable {
+          @Scoped
+          private val resource1 = CountingResource("resource1-1")
+          @Scoped
+          private val resource2 = Child()
+          @Scoped
+          private val resource3 = CountingResource("resource1-3")
+        }
+        
+        class Child : AutoCloseable {
+          @Scoped
+          private val resource1 = CountingResource("resource2-1")
+          @Scoped
+          private val resource2 = CountingResource("resource2-2")
+        }
+        
+        fun testMain() {
+          Root().close()
+        }
+      """.trimIndent()
+    )
+
+    assertThat(result.initialized).isEqualTo(
+      listOf(
+        "resource1-1",
+        "resource2-1",
+        "resource2-2",
+        "resource1-3",
+      )
+    )
+    assertThat(result.closed).isEqualTo(
+      listOf(
+        "resource1-3",
+        "resource2-2",
+        "resource2-1",
+        "resource1-1",
+      )
+    )
   }
 
 }
