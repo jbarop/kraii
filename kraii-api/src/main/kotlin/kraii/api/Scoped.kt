@@ -8,8 +8,11 @@ package kraii.api
  * disk space, connection, locked mutex, hardware, anything) to the lifetime to their controlling
  * object.
  *
+ * Containers (e.g. [List]s) which hold instances of [AutoCloseable]s are also supported. The
+ * elements are closed in their reverse natural order of the collection.
+ *
  * Limitations:
- * * The type must implement [AutoCloseable]
+ * * The type must implement [AutoCloseable] or [Iterable] of [AutoCloseable].
  * * It must be read-only (`val`). Reassignment (`var`) is not supported.
  * * The declaring class must implement [AutoCloseable].
  */

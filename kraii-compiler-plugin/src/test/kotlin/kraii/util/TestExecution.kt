@@ -21,7 +21,7 @@ data class TestExecutionResult(
 /**
  * Compiles and runs the given Kotlin source.
  *
- * The source should provide a `testMain()` method which will be invoked when the test is executed.
+ * The [testSourceContent] must provide a `testMain()` method which will be invoked during the test.
  */
 fun compileAndRunTest(testSourceContent: String): TestExecutionResult =
   compile(

@@ -40,13 +40,22 @@ class ResourceManager : AutoCloseable {
   private val firstResource = ExternalResource()
 
   @Scoped
+  private val container = mutableListOf<ExternalResource>()
+
+  @Scoped
   private val secondResource = ExternalResource()
 
-  private val unscopedResource = ExternalResource()
+  fun createNewFile() {
+    container += ExternalResource()
+  }
 }
 
 fun main() {
-  ResourceManager().use {
+  ResourceManager().use { resourceManager ->
+    print("How many files should be created? ")
+    repeat(readln().toInt()) {
+      resourceManager.createNewFile()
+    }
     println("Hello World!")
   }
 }
