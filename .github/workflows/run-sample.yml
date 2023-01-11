@@ -22,4 +22,4 @@ jobs:
           java-version: '17'
 
       - name: Run Sample
-        run: ./gradlew run
+        run: ./gradlew run --args "7"

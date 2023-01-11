@@ -50,10 +50,16 @@ class ResourceManager : AutoCloseable {
   }
 }
 
-fun main() {
+fun main(args: Array<String>) {
   ResourceManager().use { resourceManager ->
-    print("How many files should be created? ")
-    repeat(readln().toInt()) {
+    val numResources = if (args.isEmpty()) {
+      print("How many additional files should be created? ")
+      readln().toInt()
+    } else {
+      println("Creating ${args[0].toInt()} additional files.")
+      args[0].toInt()
+    }
+    repeat(numResources) {
       resourceManager.createNewFile()
     }
     println("Hello World!")
