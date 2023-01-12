@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.superTypes
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameOrNull
@@ -62,7 +63,12 @@ fun IrType.functionByName(name: String): IrSimpleFunction? =
  */
 val IrPluginContext.iterableForEach: IrSimpleFunctionSymbol
   get() =
-    referenceFunctions(FqName("kotlin.collections.forEach"))
+    referenceFunctions(
+      CallableId(
+        packageName = FqName("kotlin.collections"),
+        callableName = Name.identifier("forEach"),
+      )
+    )
       .single {
         it.owner.extensionReceiverParameter!!.type.classFqName == irBuiltIns.iterableClass.owner.kotlinFqName
       }
@@ -72,7 +78,12 @@ val IrPluginContext.iterableForEach: IrSimpleFunctionSymbol
  */
 val IrPluginContext.iterableReversed: IrSimpleFunctionSymbol
   get() =
-    referenceFunctions(FqName("kotlin.collections.reversed"))
+    referenceFunctions(
+      CallableId(
+        packageName = FqName("kotlin.collections"),
+        callableName = Name.identifier("reversed"),
+      )
+    )
       .single {
         it.owner.extensionReceiverParameter!!.type.classFqName == irBuiltIns.iterableClass.owner.kotlinFqName
       }
