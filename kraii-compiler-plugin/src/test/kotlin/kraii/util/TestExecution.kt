@@ -1,9 +1,6 @@
 package kraii.util
 
-import com.tschuchort.compiletesting.KotlinCompilation
-import com.tschuchort.compiletesting.SourceFile
-import kraii.KraiiComponentRegistrar
-import org.jetbrains.kotlin.compiler.plugin.ComponentRegistrar
+import org.junit.jupiter.api.fail
 
 data class TestExecutionResult(
 
@@ -23,58 +20,26 @@ data class TestExecutionResult(
  *
  * The [testSourceContent] must provide a `testMain()` method which will be invoked during the test.
  */
-fun compileAndRunTest(testSourceContent: String): TestExecutionResult =
-  compile(
-    SourceFile.kotlin(
-      name = "main.kt",
-      contents = """
+fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
+  val program = TestProgram()
+
+  program.newSourceFile("main.kt") {
+    """
       import kraii.util.CountingResource
       
       fun main() {
         testMain()
         println(CountingResource.serialize())
       }
-      """.trimIndent()
-    ),
-    SourceFile.kotlin(
-      name = "testSource.kt",
-      contents = testSourceContent,
-    ),
-  ).runTest()
+    """.trimIndent()
+  }
+  program.newSourceFile("TestCase.kt") { testSourceContent }
 
-private fun compile(vararg testSources: SourceFile): KotlinCompilation.Result {
-  val compilationResult = KotlinCompilation().apply {
-    sources = testSources.toList()
-    useIR = true
-    compilerPlugins = listOf<ComponentRegistrar>(KraiiComponentRegistrar())
-    inheritClassPath = true
-  }.compile()
-
-  if (compilationResult.exitCode != KotlinCompilation.ExitCode.OK) {
-    error("Kotlin Compilation failed.")
+  if (!program.compile()) {
+    fail { "Compilation of test source failed :-(" }
   }
 
-  return compilationResult
-}
-
-private fun KotlinCompilation.Result.runTest(): TestExecutionResult {
-  val javaExecutable = ProcessHandle.current().info().command().get()
-  val classPath = System.getProperty("java.class.path")
-    .split(":")
-    .plus(outputDirectory)
-    .joinToString(":")
-  val process = ProcessBuilder(javaExecutable, "-cp", classPath, "MainKt").start()
-  val returnCode = process.waitFor()
-  if (returnCode != 0) {
-    System.err.println(process.errorStream.bufferedReader().readText())
-    error("Test execution failed with return code `$returnCode`.")
-  }
-
-  return process.parseTestExecutionResult()
-}
-
-private fun Process.parseTestExecutionResult(): TestExecutionResult {
-  val lines = inputStream.bufferedReader().readLines()
+  val lines = program.execute("MainKt")
   val countingResourceStatus = CountingResource.deserialize(lines)
   return TestExecutionResult(
     initialized = countingResourceStatus.initialized,
