@@ -79,7 +79,7 @@ class KraiiClassLoweringPass(
               }
 
               val lambdaClass = pluginContext.referenceClass(
-                StandardNames.getFunctionClassId(lambda.allParameters.size).asSingleFqName()
+                StandardNames.getFunctionClassId(lambda.allParameters.size)
               ) ?: error("Cannot find function base class for lambda!")
               val lambdaType = lambdaClass.typeWith(elementType, lambda.returnType)
 

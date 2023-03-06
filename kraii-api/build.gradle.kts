@@ -2,7 +2,7 @@ group = "kraii"
 
 plugins {
   `java-library`
-  id("org.jetbrains.kotlin.jvm") version "1.7.21"
+  kotlin("jvm")
 }
 
 repositories {
