@@ -103,10 +103,6 @@ This is a proof of concept and cannot be used productively in its current state.
 
 * The compiler plugin overwrites an existing `close` method. The existing logic should be merged with the generated method.
 
-* The compiler plugin simply searches for properties that implement `AutoClosable`. However, this is too simplistic. References are passed on to other objects. Resources should only be released where they were created in the first place.
-
-* Dynamic structures like collections should be supported.
-
 * A way to support this in function scopes without having to rely on `AutoClosable.use`
 
 If you are interested in this topic, I would be very happy to hear from you.
