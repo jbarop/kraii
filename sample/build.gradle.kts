@@ -8,6 +8,10 @@ repositories {
   mavenCentral()
 }
 
+kotlin {
+  jvmToolchain(17)
+}
+
 application {
   mainClass.set("kraii.sample.AppKt")
 }
