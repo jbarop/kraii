@@ -154,4 +154,31 @@ class KraiiPluginTest {
     )
   }
 
+  @Test
+  fun `should complement an existing close method`() {
+    val result = compileAndRunTest(
+      """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        
+        class Root : AutoCloseable {
+          @Scoped
+          private val scopedResource = CountingResource("scopedResource")
+        
+          override fun close() {
+            println("existing close logic")
+          }
+        }
+        
+        fun testMain() {
+          Root().close()
+        }
+      """.trimIndent()
+    )
+
+    assertThat(result.stdout).contains("existing close logic")
+    assertThat(result.initialized).isEqualTo(listOf("scopedResource"))
+    assertThat(result.closed).isEqualTo(listOf("scopedResource"))
+  }
+
 }

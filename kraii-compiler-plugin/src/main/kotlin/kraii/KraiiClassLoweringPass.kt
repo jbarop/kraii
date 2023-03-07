@@ -31,12 +31,13 @@ class KraiiClassLoweringPass(
   override fun lower(irClass: IrClass) {
     if (!irClass.defaultType.implements(AutoCloseable::class)) return
     val thisCloseFunction = irClass.functions.single { it.name == closeName }
-    if (thisCloseFunction.body != null) return
+    val existingStatements = thisCloseFunction.body?.statements ?: emptyList()
     val propertiesToClose = irClass.properties
       .filter { it.isAnnotatedWith(Scoped::class) }
       .toList().reversed()
 
     thisCloseFunction.irBlockBody {
+      existingStatements.forEach { statement -> +statement }
       propertiesToClose.forEach { propertyToClose ->
         if (propertyToClose.type.implements(AutoCloseable::class)) {
           val closeFunction = propertyToClose.type.functionByName("close")

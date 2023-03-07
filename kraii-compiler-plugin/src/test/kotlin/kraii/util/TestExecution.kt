@@ -5,6 +5,11 @@ import org.junit.jupiter.api.fail
 data class TestExecutionResult(
 
   /**
+   * Standard output from the test program.
+   */
+  val stdout: List<String>,
+
+  /**
    * Names of the [CountingResource]s which were initialized.
    */
   val initialized: List<String>,
@@ -42,6 +47,7 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
   val lines = program.execute("MainKt")
   val countingResourceStatus = CountingResource.deserialize(lines)
   return TestExecutionResult(
+    stdout = lines,
     initialized = countingResourceStatus.initialized,
     closed = countingResourceStatus.closed,
   )

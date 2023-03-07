@@ -101,8 +101,6 @@ This is a proof of concept and cannot be used productively in its current state.
 
 * There is no error handling.
 
-* The compiler plugin overwrites an existing `close` method. The existing logic should be merged with the generated method.
-
 * A way to support this in function scopes without having to rely on `AutoClosable.use`
 
 If you are interested in this topic, I would be very happy to hear from you.
