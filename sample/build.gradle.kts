@@ -15,3 +15,7 @@ kotlin {
 application {
   mainClass.set("kraii.sample.AppKt")
 }
+
+tasks.named<JavaExec>("run") {
+  standardInput = System.`in`
+}
