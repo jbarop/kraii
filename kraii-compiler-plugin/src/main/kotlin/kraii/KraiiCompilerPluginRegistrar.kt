@@ -20,6 +20,6 @@ class KraiiCompilerPluginRegistrar : CompilerPluginRegistrar() {
     val messageCollector = configuration.get(MESSAGE_COLLECTOR_KEY, NONE)
     messageCollector.report(INFO, "kRAII Kotlin plugin active")
     FirExtensionRegistrarAdapter.registerExtension(KraiiFirExtensionRegistrar())
-    IrGenerationExtension.registerExtension(KraiiIrGenerationExtension(messageCollector))
+    IrGenerationExtension.registerExtension(KraiiIrGenerationExtension())
   }
 }
