@@ -32,6 +32,7 @@ class TestProgram {
       messageCollector = PrintingMessageCollector(System.out, PLAIN_FULL_PATHS, true),
       services = Services.EMPTY,
       arguments = kotlinCompiler.createArguments().also { args ->
+        args.useK2 = true
         args.noStdlib = true
         args.noReflect = true
         args.disableDefaultScriptingPlugin = true

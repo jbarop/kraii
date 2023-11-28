@@ -1,7 +1,7 @@
 package kraii
 
+import org.jetbrains.kotlin.GeneratedDeclarationKey
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.descriptors.ClassDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -13,24 +13,21 @@ import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.superTypes
 import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.resolve.descriptorUtil.fqNameOrNull
-import org.jetbrains.kotlin.resolve.descriptorUtil.getSuperInterfaces
 import kotlin.reflect.KClass
 
-/**
- * The [Name] of the [AutoCloseable.close] method.
- */
-val closeName = Name.identifier("close")
+object KraiiPluginKey : GeneratedDeclarationKey() {
+  override fun toString() = "kraii-compiler-plugin"
+}
 
-/**
- * Checks if a class implements [AutoCloseable].
- */
-fun ClassDescriptor.implementsAutoClosable(): Boolean =
-  getSuperInterfaces().any {
-    (it.fqNameOrNull() == FqName(AutoCloseable::class.qualifiedName!!)) || it.implementsAutoClosable()
-  }
+val autoCloseableClassId = ClassId(
+  FqName("java.lang"),
+  Name.identifier("AutoCloseable"),
+)
+
+val closeName = Name.identifier("close")
 
 /**
  * Checks if the property is annotated with the specified annotation.

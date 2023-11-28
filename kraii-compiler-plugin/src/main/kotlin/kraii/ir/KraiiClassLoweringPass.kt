@@ -1,5 +1,6 @@
-package kraii
+package kraii.ir
 
+import kraii.*
 import kraii.api.Scoped
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
