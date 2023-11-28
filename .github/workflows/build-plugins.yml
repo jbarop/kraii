@@ -1,7 +1,9 @@
 name: Build Plugins
 
 on:
-  push
+  push:
+    branches:
+      - '**'
 
 jobs:
   build-plugins:

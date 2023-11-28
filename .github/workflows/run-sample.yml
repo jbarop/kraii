@@ -1,7 +1,9 @@
 name: Run Sample
 
 on:
-  push
+  push:
+    branches:
+      - '**'
 
 jobs:
   run-sample:
