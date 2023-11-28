@@ -18,4 +18,4 @@ jobs:
           java-version: '17'
 
       - name: Run Build
-        run: ./gradlew build kraii-intellij-plugin:buildPlugin
+        run: ./gradlew build
