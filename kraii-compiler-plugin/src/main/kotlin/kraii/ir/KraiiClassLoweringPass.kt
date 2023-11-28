@@ -1,7 +1,7 @@
 package kraii.ir
 
-import kraii.*
 import kraii.api.Scoped
+import kraii.closeName
 import org.jetbrains.kotlin.backend.common.ClassLoweringPass
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
