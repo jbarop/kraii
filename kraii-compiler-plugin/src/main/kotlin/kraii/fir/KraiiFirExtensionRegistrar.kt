@@ -12,7 +12,6 @@ import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.types.classId
-import org.jetbrains.kotlin.fir.types.coneType
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.Name
 
@@ -36,7 +35,6 @@ class KraiiAddCloseMethodExtension(session: FirSession) :
   ): Set<Name> {
     if (!classSymbol.implementsAutoClosable()) return emptySet()
     if (classSymbol.hasCloseMethod()) return emptySet()
-
     return setOf(closeName)
   }
 
@@ -64,7 +62,7 @@ class KraiiAddCloseMethodExtension(session: FirSession) :
       useSiteSession = session,
     ).find { it.classId == autoCloseableClassId } != null
 
-  @Suppress("DIRECT_DECLARATION_ACCESS")
+  @Suppress("DEPRECATION")
   private fun FirClassSymbol<*>.hasCloseMethod() =
     declarationSymbols.filterIsInstance<FirNamedFunctionSymbol>()
       .filter { it.name == closeName }
