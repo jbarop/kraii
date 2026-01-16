@@ -1,0 +1,12 @@
+[versions]
+kotlin = "2.3.0"
+junit = "5.13.3"
+assertj = "3.27.6"
+gson = "2.13.1"
+
+[libraries]
+assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

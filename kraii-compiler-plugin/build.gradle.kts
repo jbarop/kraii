@@ -6,15 +6,16 @@ dependencies {
   implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable")
   implementation(project(":kraii-api"))
 
-  testImplementation(platform("org.junit:junit-bom:5.11.4"))
-  testImplementation("org.junit.jupiter:junit-jupiter")
-  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-  testImplementation("org.assertj:assertj-core:3.27.0")
-  testImplementation("com.google.code.gson:gson:2.11.0")
+  testImplementation(libs.assertj.core)
+  testImplementation(libs.gson)
 }
 
-tasks.test {
-  useJUnitPlatform()
+testing {
+  suites {
+    val test by getting(JvmTestSuite::class) {
+      useJUnitJupiter(libs.versions.junit.get())
+    }
+  }
 }
 
 kotlin {
