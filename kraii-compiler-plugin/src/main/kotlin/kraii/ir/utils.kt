@@ -1,17 +1,13 @@
 package kraii.ir
 
-import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
-import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.util.functions
-import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.superTypes
-import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import kotlin.reflect.KClass
@@ -41,31 +37,3 @@ fun IrType.implements(kClass: KClass<*>): Boolean =
  */
 fun IrType.functionByName(name: String): IrSimpleFunction? =
   getClass()?.functions?.single { it.name == Name.identifier(name) }
-
-/**
- * Finds the extension function [Iterable<T>.forEach].
- */
-val IrPluginContext.iterableForEach: IrSimpleFunctionSymbol
-  get() =
-    referenceFunctions(
-      CallableId(
-        FqName("kotlin.collections"),
-        Name.identifier("forEach"),
-      )
-    ).single {
-      it.owner.extensionReceiverParameter!!.type.classFqName == irBuiltIns.iterableClass.owner.kotlinFqName
-    }
-
-/**
- * Finds the extension function [Iterable<T>.reversed].
- */
-val IrPluginContext.iterableReversed: IrSimpleFunctionSymbol
-  get() =
-    referenceFunctions(
-      CallableId(
-        FqName("kotlin.collections"),
-        Name.identifier("reversed"),
-      )
-    ).single {
-      it.owner.extensionReceiverParameter!!.type.classFqName == irBuiltIns.iterableClass.owner.kotlinFqName
-    }

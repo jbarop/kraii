@@ -9,6 +9,9 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
 import org.jetbrains.kotlin.fir.plugin.createMemberFunction
 import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
+import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
+import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.fir.types.classId
@@ -62,10 +65,11 @@ class KraiiAddCloseMethodExtension(session: FirSession) :
       useSiteSession = session,
     ).find { it.classId == autoCloseableClassId } != null
 
-  @Suppress("DEPRECATION")
-  private fun FirClassSymbol<*>.hasCloseMethod() =
-    declarationSymbols.filterIsInstance<FirNamedFunctionSymbol>()
-      .filter { it.name == closeName }
-      .any { it.valueParameterSymbols.isEmpty() }
+  @OptIn(SymbolInternals::class, DirectDeclarationsAccess::class)
+  private fun FirClassSymbol<*>.hasCloseMethod(): Boolean {
+    return fir.declarations
+      .filterIsInstance<FirSimpleFunction>()
+      .any { it.name == closeName && it.valueParameters.isEmpty() }
+  }
 
 }

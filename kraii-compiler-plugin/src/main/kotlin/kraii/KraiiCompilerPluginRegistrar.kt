@@ -12,6 +12,8 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
 
 class KraiiCompilerPluginRegistrar : CompilerPluginRegistrar() {
 
+  override val pluginId: String = "kraii"
+
   override val supportsK2: Boolean = true
 
   override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
