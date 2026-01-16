@@ -1,3 +1,6 @@
+@file:Suppress("DEPRECATION_ERROR")
+@file:OptIn(UnsafeDuringIrConstructionAPI::class)
+
 package kraii.ir
 
 import kraii.api.Scoped
@@ -15,7 +18,7 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
-import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin.GET_PROPERTY
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.types.typeOrNull
 import org.jetbrains.kotlin.ir.types.typeWith
@@ -44,7 +47,7 @@ class KraiiClassLoweringPass(
           val closeFunction = propertyToClose.type.functionByName("close")
             ?: error("`close()` function not found")
           +irCall(closeFunction).apply {
-            dispatchReceiver = irCall(propertyToClose.getter!!, origin = GET_PROPERTY).apply {
+            dispatchReceiver = irCall(propertyToClose.getter!!, origin = IrStatementOrigin.GET_PROPERTY).apply {
               dispatchReceiver = irGet(thisCloseFunction.dispatchReceiverParameter!!)
             }
           }
@@ -57,7 +60,7 @@ class KraiiClassLoweringPass(
           ) {
             irCall(pluginContext.iterableForEach).apply {
               extensionReceiver = irCall(pluginContext.iterableReversed).apply {
-                extensionReceiver = irCall(propertyToClose.getter!!, GET_PROPERTY).apply {
+                extensionReceiver = irCall(propertyToClose.getter!!, IrStatementOrigin.GET_PROPERTY).apply {
                   dispatchReceiver = irGet(thisCloseFunction.dispatchReceiverParameter!!)
                 }
               }

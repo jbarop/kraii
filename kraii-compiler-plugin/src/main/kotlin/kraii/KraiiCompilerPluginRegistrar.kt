@@ -3,7 +3,7 @@ package kraii
 import kraii.fir.KraiiFirExtensionRegistrar
 import kraii.ir.KraiiIrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
-import org.jetbrains.kotlin.cli.common.CLIConfigurationKeys.MESSAGE_COLLECTOR_KEY
+import org.jetbrains.kotlin.config.CommonConfigurationKeys.MESSAGE_COLLECTOR_KEY
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity.INFO
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector.Companion.NONE
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar

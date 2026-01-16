@@ -2,7 +2,7 @@ package kraii.ir
 
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
-import org.jetbrains.kotlin.backend.common.lower
+import org.jetbrains.kotlin.backend.common.runOnFilePostfix
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 
 class KraiiIrGenerationExtension: IrGenerationExtension {
@@ -11,7 +11,10 @@ class KraiiIrGenerationExtension: IrGenerationExtension {
     moduleFragment: IrModuleFragment,
     pluginContext: IrPluginContext,
   ) {
-    KraiiClassLoweringPass(pluginContext).lower(moduleFragment)
+    val pass = KraiiClassLoweringPass(pluginContext)
+    for (file in moduleFragment.files) {
+      pass.runOnFilePostfix(file)
+    }
   }
 
 }

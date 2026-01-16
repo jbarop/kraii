@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.KotlinTopLevelExtension
-
 allprojects {
   repositories {
     mavenCentral()
@@ -8,5 +6,5 @@ allprojects {
 
 plugins {
   // Applying external plugins with same version to subprojects
-  kotlin("jvm") version "1.9.23" apply false
+  kotlin("jvm") version "2.0.21" apply false
 }
