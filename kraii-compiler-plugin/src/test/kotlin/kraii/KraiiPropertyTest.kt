@@ -4,7 +4,7 @@ import kraii.util.compileAndRunTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class KraiiPluginTest {
+class KraiiPropertyTest {
 
   @Test
   fun `should close resource which is annotated`() {
