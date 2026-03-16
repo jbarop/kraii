@@ -1,6 +1,6 @@
 plugins {
   kotlin("jvm") version "2.3.0"
-  alias(libs.plugins.ktlint)
+  id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
   id("kraii-gradle-plugin")
   application
 }
