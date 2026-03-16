@@ -40,5 +40,4 @@ class CountingResource(
     status.closed += name
     println("CountingResource(\"$name\") closed")
   }
-
 }

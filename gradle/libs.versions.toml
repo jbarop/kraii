@@ -1,5 +1,6 @@
 [versions]
 kotlin = "2.3.0"
+ktlint = "14.0.1"
 junit = "5.13.3"
 assertj = "3.27.6"
 gson = "2.13.1"
@@ -10,3 +11,4 @@ gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }

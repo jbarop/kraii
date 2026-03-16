@@ -4,13 +4,13 @@ import kraii.KraiiPluginKey
 import kraii.autoCloseableClassId
 import kraii.closeName
 import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
+import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
 import org.jetbrains.kotlin.fir.plugin.createMemberFunction
 import org.jetbrains.kotlin.fir.resolve.lookupSuperTypes
-import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
 import org.jetbrains.kotlin.fir.symbols.SymbolInternals
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassSymbol
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
@@ -23,14 +23,14 @@ class KraiiFirExtensionRegistrar : FirExtensionRegistrar() {
   override fun ExtensionRegistrarContext.configurePlugin() {
     +::KraiiAddCloseMethodExtension
   }
-
 }
 
 /**
  * Adds a [AutoCloseable.close] method to all implementations of [AutoCloseable].
  */
-class KraiiAddCloseMethodExtension(session: FirSession) :
-  FirDeclarationGenerationExtension(session) {
+class KraiiAddCloseMethodExtension(
+  session: FirSession,
+) : FirDeclarationGenerationExtension(session) {
 
   override fun getCallableNamesForClass(
     classSymbol: FirClassSymbol<*>,
@@ -53,7 +53,7 @@ class KraiiAddCloseMethodExtension(session: FirSession) :
         key = KraiiPluginKey,
         name = callableId.callableName,
         returnType = session.builtinTypes.unitType.coneType,
-      ).symbol
+      ).symbol,
     )
   }
 
@@ -66,10 +66,8 @@ class KraiiAddCloseMethodExtension(session: FirSession) :
     ).find { it.classId == autoCloseableClassId } != null
 
   @OptIn(SymbolInternals::class, DirectDeclarationsAccess::class)
-  private fun FirClassSymbol<*>.hasCloseMethod(): Boolean {
-    return fir.declarations
+  private fun FirClassSymbol<*>.hasCloseMethod(): Boolean =
+    fir.declarations
       .filterIsInstance<FirSimpleFunction>()
       .any { it.name == closeName && it.valueParameters.isEmpty() }
-  }
-
 }

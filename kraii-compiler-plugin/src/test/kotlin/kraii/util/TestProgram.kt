@@ -13,14 +13,19 @@ import kotlin.io.path.createTempDirectory
 class TestProgram {
 
   private val sourcesDirectory =
-    createTempDirectory("kraii-test-compilation-sources").toFile()
+    createTempDirectory("kraii-test-compilation-sources")
+      .toFile()
       .also { it.deleteOnExit() }
 
   private val outputDirectory =
-    createTempDirectory("kraii-test-compilation-output").toFile()
+    createTempDirectory("kraii-test-compilation-output")
+      .toFile()
       .also { it.deleteOnExit() }
 
-  fun newSourceFile(fileName: String, fileContent: () -> String) {
+  fun newSourceFile(
+    fileName: String,
+    fileContent: () -> String,
+  ) {
     val file = sourcesDirectory.resolve(fileName)
     file.createNewFile()
     file.writeText(fileContent())
@@ -29,7 +34,11 @@ class TestProgram {
   fun compile(): Boolean {
     val kotlinCompiler = K2JVMCompiler()
     val result = kotlinCompiler.exec(
-      messageCollector = PrintingMessageCollector(System.out, PLAIN_FULL_PATHS, true),
+      messageCollector = PrintingMessageCollector(
+        System.out,
+        PLAIN_FULL_PATHS,
+        true,
+      ),
       services = Services.EMPTY,
       arguments = kotlinCompiler.createArguments().also { args ->
         args.noStdlib = true
@@ -37,22 +46,33 @@ class TestProgram {
         args.disableDefaultScriptingPlugin = true
         args.jdkHome = System.getProperty("java.home")
         args.classpath = System.getProperty("java.class.path")
-        args.pluginClasspaths = System.getProperty("java.class.path").split(":").toTypedArray()
+        args.pluginClasspaths =
+          System.getProperty("java.class.path").split(":").toTypedArray()
         args.destination = outputDirectory.absolutePath
         args.freeArgs = listOf(sourcesDirectory.absolutePath)
-      }
+      },
     )
 
     return result == ExitCode.OK
   }
 
   fun execute(mainClass: String): List<String> {
-    val javaExecutable = ProcessHandle.current().info().command().get()
-    val classPath = System.getProperty("java.class.path")
+    val javaExecutable = ProcessHandle
+      .current()
+      .info()
+      .command()
+      .get()
+    val classPath = System
+      .getProperty("java.class.path")
       .split(":")
       .plus(outputDirectory)
       .joinToString(":")
-    val process = ProcessBuilder(javaExecutable, "-cp", classPath, mainClass).start()
+    val process = ProcessBuilder(
+      javaExecutable,
+      "-cp",
+      classPath,
+      mainClass,
+    ).start()
     val returnCode = process.waitFor()
     if (returnCode != 0) {
       System.err.println(process.errorStream.bufferedReader().readText())
@@ -61,5 +81,4 @@ class TestProgram {
 
     return process.inputStream.bufferedReader().readLines()
   }
-
 }

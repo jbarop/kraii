@@ -3,6 +3,7 @@ group = "kraii"
 plugins {
   `java-library`
   kotlin("jvm")
+  alias(libs.plugins.ktlint)
 }
 
 repositories {

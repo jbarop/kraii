@@ -7,21 +7,21 @@ import org.junit.jupiter.api.Test
 class KraiiPluginTest {
 
   @Test
-  fun `should close resource which is annotated with @Scoped`() {
+  fun `should close resource which is annotated`() {
     val result = compileAndRunTest(
       """
-        import kraii.api.Scoped
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          @Scoped
-          private val resource = CountingResource("resource")
-        }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        @Scoped
+        private val resource = CountingResource("resource")
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(listOf("resource"))
@@ -29,19 +29,19 @@ class KraiiPluginTest {
   }
 
   @Test
-  fun `should not close resource which is not annotated with @Scoped`() {
+  fun `should not close resource which is not annotated`() {
     val result = compileAndRunTest(
       """
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          private val resource = CountingResource("resource")
-        }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        private val resource = CountingResource("resource")
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(listOf("resource"))
@@ -49,23 +49,23 @@ class KraiiPluginTest {
   }
 
   @Test
-  fun `should close resource inside container which is annotated with @Scoped`() {
+  fun `should close resource inside container which is annotated`() {
     val result = compileAndRunTest(
       """
-        import kraii.api.Scoped
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          @Scoped
-          private val container = listOf(
-            CountingResource("resource"),
-          )
-        }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        @Scoped
+        private val container = listOf(
+          CountingResource("resource"),
+        )
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(listOf("resource"))
@@ -73,22 +73,22 @@ class KraiiPluginTest {
   }
 
   @Test
-  fun `should not close resource inside container which is not annotated with @Scoped`() {
+  fun `should not close resource inside container which is not annotated`() {
     val result = compileAndRunTest(
       """
-        import kraii.api.Scoped
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          private val container = listOf(
-            CountingResource("resource"),
-          )
-        }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        private val container = listOf(
+          CountingResource("resource"),
+        )
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(listOf("resource"))
@@ -96,38 +96,38 @@ class KraiiPluginTest {
   }
 
   @Test
-  fun `should close resources and containers in reverse order than the declaration`() {
+  fun `should close resources and containers in reverse order`() {
     val result = compileAndRunTest(
       """
-        import kraii.api.Scoped
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          @Scoped
-          private val resource1 = CountingResource("resource1-1")
-          @Scoped
-          private val resource2 = Child()
-          @Scoped
-          private val resource3 = CountingResource("resource1-3")
-        }
-        
-        class Child : AutoCloseable {
-          @Scoped
-          private val resource1 = CountingResource("resource2-1")
-          @Scoped
-          private val container2 = listOf(
-            CountingResource("resource2-2-1"),
-            CountingResource("resource2-2-2"),
-            CountingResource("resource2-2-3"),
-          )
-          @Scoped
-          private val resource3 = CountingResource("resource2-3")
-        }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        @Scoped
+        private val resource1 = CountingResource("resource1-1")
+        @Scoped
+        private val resource2 = Child()
+        @Scoped
+        private val resource3 = CountingResource("resource1-3")
+      }
+      
+      class Child : AutoCloseable {
+        @Scoped
+        private val resource1 = CountingResource("resource2-1")
+        @Scoped
+        private val container2 = listOf(
+          CountingResource("resource2-2-1"),
+          CountingResource("resource2-2-2"),
+          CountingResource("resource2-2-3"),
+        )
+        @Scoped
+        private val resource3 = CountingResource("resource2-3")
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(
@@ -139,7 +139,7 @@ class KraiiPluginTest {
         "resource2-2-3",
         "resource2-3",
         "resource1-3",
-      )
+      ),
     )
     assertThat(result.closed).isEqualTo(
       listOf(
@@ -150,7 +150,7 @@ class KraiiPluginTest {
         "resource2-2-1",
         "resource2-1",
         "resource1-1",
-      )
+      ),
     )
   }
 
@@ -158,27 +158,26 @@ class KraiiPluginTest {
   fun `should complement an existing close method`() {
     val result = compileAndRunTest(
       """
-        import kraii.api.Scoped
-        import kraii.util.CountingResource
-        
-        class Root : AutoCloseable {
-          @Scoped
-          private val scopedResource = CountingResource("scopedResource")
-        
-          override fun close() {
-            println("existing close logic")
-          }
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+      
+      class Root : AutoCloseable {
+        @Scoped
+        private val scopedResource = CountingResource("scopedResource")
+      
+        override fun close() {
+          println("existing close logic")
         }
-        
-        fun testMain() {
-          Root().close()
-        }
-      """.trimIndent()
+      }
+      
+      fun testMain() {
+        Root().close()
+      }
+      """.trimIndent(),
     )
 
     assertThat(result.stdout).contains("existing close logic")
     assertThat(result.initialized).isEqualTo(listOf("scopedResource"))
     assertThat(result.closed).isEqualTo(listOf("scopedResource"))
   }
-
 }

@@ -13,15 +13,18 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 class KraiiKotlinCompilerGradlePlugin : KotlinCompilerPluginSupportPlugin {
 
   override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
-    kotlinCompilation.target.project.plugins.hasPlugin(KraiiKotlinCompilerGradlePlugin::class.java)
+    kotlinCompilation.target.project.plugins.hasPlugin(
+      KraiiKotlinCompilerGradlePlugin::class.java,
+    )
 
   override fun getCompilerPluginId(): String = "kraii"
 
-  override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
-    groupId = "kraii",
-    artifactId = "kraii-compiler-plugin",
-    version = "0.0.1",
-  )
+  override fun getPluginArtifact(): SubpluginArtifact =
+    SubpluginArtifact(
+      groupId = "kraii",
+      artifactId = "kraii-compiler-plugin",
+      version = "0.0.1",
+    )
 
   override fun apply(target: Project) {
     target.extensions.create(
@@ -30,7 +33,9 @@ class KraiiKotlinCompilerGradlePlugin : KotlinCompilerPluginSupportPlugin {
     )
 
     val apiDependency = target.dependencies.create("kraii:kraii-api:0.0.1")
-    val compileOnlyConfiguration = target.configurations.getByName("compileOnly")
+    val compileOnlyConfiguration = target.configurations.getByName(
+      "compileOnly",
+    )
     compileOnlyConfiguration.dependencies.add(apiDependency)
   }
 

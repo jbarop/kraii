@@ -1,6 +1,7 @@
 plugins {
   `java-gradle-plugin`
   kotlin("jvm")
+  alias(libs.plugins.ktlint)
 }
 
 dependencies {

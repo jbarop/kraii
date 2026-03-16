@@ -24,13 +24,20 @@ fun IrProperty.isAnnotatedWith(kClass: KClass<*>): Boolean =
  * The type of the property.
  */
 val IrProperty.type: IrSimpleType
-  get() = (backingField?.type ?: error("Only field properties are supported.")) as IrSimpleType
+  get() = (
+    backingField?.type ?: error(
+      "Only field properties are supported.",
+    )
+  ) as IrSimpleType
 
 /**
  * Checks if the type implements the given class.
  */
 fun IrType.implements(kClass: KClass<*>): Boolean =
-  superTypes().any { it.classFqName == FqName(kClass.qualifiedName!!) || it.implements(kClass) }
+  superTypes().any {
+    it.classFqName == FqName(kClass.qualifiedName!!) ||
+      it.implements(kClass)
+  }
 
 /**
  * Finds the function by name.

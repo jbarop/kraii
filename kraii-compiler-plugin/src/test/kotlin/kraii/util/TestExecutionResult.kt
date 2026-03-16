@@ -30,12 +30,12 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
 
   program.newSourceFile("main.kt") {
     """
-      import kraii.util.CountingResource
-      
-      fun main() {
-        testMain()
-        println(CountingResource.serialize())
-      }
+    import kraii.util.CountingResource
+    
+    fun main() {
+      testMain()
+      println(CountingResource.serialize())
+    }
     """.trimIndent()
   }
   program.newSourceFile("TestCase.kt") { testSourceContent }
