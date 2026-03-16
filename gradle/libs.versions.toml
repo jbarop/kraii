@@ -1,9 +1,9 @@
 [versions]
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 ktlint = "14.0.1"
 junit = "5.13.3"
-assertj = "3.27.6"
-gson = "2.13.1"
+assertj = "3.27.7"
+gson = "2.13.2"
 
 [libraries]
 assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
