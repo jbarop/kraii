@@ -22,7 +22,7 @@ However, this is limited to the scope of a single function.
 If we have many non-heap resources associated with the lifecycle of objects, then they need to be released explicitly.
 This is error-prone and can lead to leaks.
 
-"Resource Acquisition Is Initialization" (RAII) is a resource management strategy invented by Bjarne Stroustrup for C++. Here, each object is responsible for managing its own resources. Thus, this mechanism ensures that any resources are released as early as possible.
+"Resource Acquisition Is Initialization" (RAII) is a resource management strategy invented by Bjarne Stroustrup for C++. Rust has adopted RAII as a core language concept through its ownership system and the `Drop` trait, making deterministic resource cleanup a fundamental part of the language. In both languages, each object is responsible for managing its own resources, ensuring that any resources are released as early as possible.
 
 == Example
 
