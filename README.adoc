@@ -30,7 +30,7 @@ This is error-prone and can lead to leaks.
 [source,bash]
 ----
 git clone git@github.com:jbarop/kraii.git
-cd sample
+cd kraii/sample
 ./gradlew run
 ----
 
@@ -39,7 +39,8 @@ cd sample
 [source,kotlin]
 ----
 /**
- * A temporary file as example for a non-heap resource.
+ * A temporary file as an example for a non-heap
+ * resource.
  */
 class ExternalResource : AutoCloseable {
 
@@ -54,28 +55,32 @@ class ExternalResource : AutoCloseable {
    * responsible for freeing the resource. In this
    * case the file needs to be removed.
    */
-  override fun close(){
+  override fun close() {
     tempFile.deleteExisting()
     println("$tempFile has been deleted.")
   }
 }
 
 /**
- * An 'complex' object which uses other resources.
+ * A class which uses other resources.
  *
  * It extends the [AutoCloseable] interface, but does
  * implement [AutoCloseable.close]. This is done
  * automatically by the compiler plugin.
  */
-class ResourceManager : AutoCloseable {
+class ResourceOwner : AutoCloseable {
 
   @Scoped
   private val firstResource = ExternalResource()
 
   @Scoped
   private val secondResource = ExternalResource()
+}
 
-  private val unscopedResource = ExternalResource()
+fun main() {
+  @Scoped val owner = ResourceOwner()
+  println("Hello World!")
+  // owner.close() is called automatically when the function ends
 }
 ----
 
@@ -83,17 +88,14 @@ class ResourceManager : AutoCloseable {
 
 [text]
 ----
-/tmp/13763347389405974484.tmp has been created.
-/tmp/3245136265152033692.tmp has been created.
-/tmp/1281616729360835633.tmp has been created.
+/tmp/2214526001872441198.tmp has been created.
+/tmp/15561580686778472.tmp has been created.
 Hello World!
-/tmp/3245136265152033692.tmp has been deleted.
-/tmp/13763347389405974484.tmp has been deleted.
+/tmp/15561580686778472.tmp has been deleted.
+/tmp/2214526001872441198.tmp has been deleted.
 ----
 
-The two temporary files were removed automatically, because generated `ResourceManager.close()` function called `firstResource.close()` and `secondResource.close()`.
-
-Also, worth mentioning is that the order of release was exactly the opposite to the initialization. Resources can be dependent on each other.
+The plugin generates `ResourceOwner.close()` which closes `secondResource` and `firstResource` in reverse declaration order. The `@Scoped` local variable in `main` ensures `owner.close()` is called automatically when the function ends.
 
 == IntelliJ IDEA Setup
 
@@ -110,8 +112,6 @@ See https://youtrack.jetbrains.com/issue/KTIJ-29248[KTIJ-29248] for details.
 This is a proof of concept and cannot be used productively in its current state. The plugin has not been extensively tested nor released.
 
 * There is no error handling.
-
-* A way to support this in function scopes without having to rely on `AutoClosable.use`
 
 * Support Kotlin Native
 

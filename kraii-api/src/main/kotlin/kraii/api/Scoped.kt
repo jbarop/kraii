@@ -16,6 +16,6 @@ package kraii.api
  * * It must be read-only (`val`). Reassignment (`var`) is not supported.
  * * The declaring class must implement [AutoCloseable].
  */
-@Target(AnnotationTarget.PROPERTY)
+@Target(AnnotationTarget.PROPERTY, AnnotationTarget.LOCAL_VARIABLE)
 @Retention(AnnotationRetention.SOURCE)
 annotation class Scoped

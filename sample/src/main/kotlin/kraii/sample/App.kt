@@ -28,13 +28,13 @@ class ExternalResource : AutoCloseable {
 }
 
 /**
- * An 'complex' object which uses other resources.
+ * A class which uses other resources.
  *
  * It extends the [AutoCloseable] interface, but does
  * implement [AutoCloseable.close]. This is done
  * automatically by the compiler plugin.
  */
-class ResourceManager : AutoCloseable {
+class ResourceOwner : AutoCloseable {
 
   @Scoped
   private val firstResource = ExternalResource()
@@ -51,12 +51,12 @@ class ResourceManager : AutoCloseable {
 }
 
 fun main(args: Array<String>) {
-  ResourceManager().use { resourceManager ->
-    repeat(numberOfFilesToBeCreated(args)) {
-      resourceManager.createNewFile()
-    }
-    println("Hello World!")
+  @Scoped val container = ResourceOwner()
+  repeat(numberOfFilesToBeCreated(args)) {
+    container.createNewFile()
   }
+
+  println("Hello World!")
 }
 
 /**

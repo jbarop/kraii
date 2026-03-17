@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 
 class KraiiLocalVariableTest {
 
-  @Disabled("Not yet implemented")
   @Test
   fun `should close scoped local variable at end of function`() {
     val result = compileAndRunTest(
@@ -25,7 +24,6 @@ class KraiiLocalVariableTest {
     assertThat(result.closed).isEqualTo(listOf("a"))
   }
 
-  @Disabled("Not yet implemented")
   @Test
   fun `should close multiple scoped local variables in reverse order`() {
     val result = compileAndRunTest(

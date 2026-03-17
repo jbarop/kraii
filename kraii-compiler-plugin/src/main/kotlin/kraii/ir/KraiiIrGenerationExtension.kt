@@ -14,5 +14,9 @@ class KraiiIrGenerationExtension : IrGenerationExtension {
     moduleFragment.acceptChildrenVoid(
       KraiiCloseMethodBodyGenerator(pluginContext),
     )
+    moduleFragment.transform(
+      KraiiLocalVariableCloseInserter(pluginContext),
+      null,
+    )
   }
 }
