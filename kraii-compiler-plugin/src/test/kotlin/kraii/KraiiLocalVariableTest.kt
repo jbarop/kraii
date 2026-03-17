@@ -2,7 +2,6 @@ package kraii
 
 import kraii.util.compileAndRunTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class KraiiLocalVariableTest {
@@ -174,7 +173,6 @@ class KraiiLocalVariableTest {
     assertThat(result.closed).isEqualTo(listOf("c", "b", "a"))
   }
 
-  @Disabled("Not yet implemented")
   @Test
   fun `should close scoped local variable when exception is thrown`() {
     val result = compileAndRunTest(

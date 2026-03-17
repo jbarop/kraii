@@ -7,94 +7,83 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
-import org.jetbrains.kotlin.ir.builders.irTemporary
+import org.jetbrains.kotlin.ir.builders.irTry
 import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
-import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
 
 /**
  * Inserts [AutoCloseable.close] calls for local variables annotated with @Scoped
- * at the end of the enclosing block body and before return statements.
+ * by wrapping subsequent statements in try-finally blocks. This ensures resources
+ * are closed on normal exit, early returns, and exceptions.
  */
 class KraiiLocalVariableCloseInserter(
   private val pluginContext: IrPluginContext,
 ) : IrElementTransformerVoid() {
 
   private val scopedFqName = FqName(Scoped::class.qualifiedName!!)
-  private val scopeStack = mutableListOf<MutableList<IrVariable>>()
 
   override fun visitBody(body: IrBody): IrBody {
     if (body !is IrBlockBody) return super.visitBody(body)
-    scopeStack.add(mutableListOf())
     val result = super.visitBody(body) as IrBlockBody
-    val currentScope = scopeStack.removeLast()
-    appendCloseCallsForVariables(result.statements, currentScope)
+    wrapScopedVariablesInTryFinally(result.statements)
     return result
   }
 
   override fun visitBlock(expression: IrBlock): IrBlock {
-    scopeStack.add(mutableListOf())
     val result = super.visitBlock(expression) as IrBlock
-    val currentScope = scopeStack.removeLast()
-    appendCloseCallsForVariables(result.statements, currentScope)
+    wrapScopedVariablesInTryFinally(result.statements)
     return result
   }
 
-  override fun visitVariable(declaration: IrVariable): IrStatement {
-    val result = super.visitVariable(declaration)
-    if (result is IrVariable &&
-      result.annotations.any {
+  private fun isScopedVariable(statement: IrStatement): Boolean =
+    statement is IrVariable &&
+      statement.annotations.any {
         it.type.classFqName == scopedFqName
       }
-    ) {
-      scopeStack.lastOrNull()?.add(result)
-    }
-    return result
-  }
 
-  override fun visitReturn(expression: IrReturn): IrExpression {
-    val result = super.visitReturn(expression) as IrReturn
+  private fun wrapScopedVariablesInTryFinally(
+    statements: MutableList<IrStatement>,
+  ) {
+    for (i in statements.indices.reversed()) {
+      val stmt = statements[i]
+      if (!isScopedVariable(stmt)) continue
+      val variable = stmt as IrVariable
 
-    val allScoped = scopeStack.flatten()
-    if (allScoped.isEmpty()) return result
+      val closeMethod = variable.type.functionByName("close") ?: continue
+      val builder = DeclarationIrBuilder(pluginContext, variable.symbol)
 
-    val builder = DeclarationIrBuilder(pluginContext, result.returnTargetSymbol)
+      val afterIndex = i + 1
+      val statementsAfter = if (afterIndex < statements.size) {
+        statements.subList(afterIndex, statements.size).toList().also {
+          statements.subList(afterIndex, statements.size).clear()
+        }
+      } else {
+        emptyList()
+      }
 
-    return builder.irBlock {
-      val tmp = irTemporary(result.value)
-      for (variable in allScoped.reversed()) {
-        val closeMethod = variable.type.functionByName("close") ?: continue
+      val tryBody = builder.irBlock {
+        statementsAfter.forEach { +it }
+      }
+
+      val finallyBody = builder.irBlock {
         +irCall(closeMethod).apply {
           dispatchReceiver = irGet(variable)
         }
       }
-      +result.apply { value = irGet(tmp) }
+
+      val tryFinally = builder.irTry(
+        type = pluginContext.irBuiltIns.unitType,
+        tryResult = tryBody,
+        catches = emptyList(),
+        finallyExpression = finallyBody,
+      )
+
+      statements.add(tryFinally)
     }
-  }
-
-  private fun appendCloseCallsForVariables(
-    statements: MutableList<IrStatement>,
-    scopedVariables: List<IrVariable>,
-  ) {
-    if (scopedVariables.isEmpty()) return
-
-    val closeCalls = mutableListOf<IrStatement>()
-
-    for (variable in scopedVariables.reversed()) {
-      val closeMethod = variable.type.functionByName("close") ?: continue
-      val builder = DeclarationIrBuilder(pluginContext, variable.symbol)
-      val callClose = builder.irCall(closeMethod).apply {
-        dispatchReceiver = builder.irGet(variable)
-      }
-      closeCalls.add(callClose)
-    }
-
-    statements.addAll(closeCalls)
   }
 }
