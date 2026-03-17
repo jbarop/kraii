@@ -7,6 +7,7 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.types.classFqName
@@ -26,14 +27,26 @@ class KraiiLocalVariableCloseInserter(
   override fun visitBody(body: IrBody): IrBody {
     val result = super.visitBody(body)
     if (result !is IrBlockBody) return result
+    appendCloseCallsToStatements(result.statements)
+    return result
+  }
 
-    val scopedVariables = result.statements
+  override fun visitBlock(expression: IrBlock): IrBlock {
+    val result = super.visitBlock(expression) as IrBlock
+    appendCloseCallsToStatements(result.statements)
+    return result
+  }
+
+  private fun appendCloseCallsToStatements(
+    statements: MutableList<IrStatement>,
+  ) {
+    val scopedVariables = statements
       .filterIsInstance<IrVariable>()
       .filter { variable ->
         variable.annotations.any { it.type.classFqName == scopedFqName }
       }
 
-    if (scopedVariables.isEmpty()) return result
+    if (scopedVariables.isEmpty()) return
 
     val closeCalls = mutableListOf<IrStatement>()
 
@@ -46,8 +59,6 @@ class KraiiLocalVariableCloseInserter(
       closeCalls.add(callClose)
     }
 
-    result.statements.addAll(closeCalls)
-
-    return result
+    statements.addAll(closeCalls)
   }
 }

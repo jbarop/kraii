@@ -43,7 +43,6 @@ class KraiiLocalVariableTest {
     assertThat(result.closed).isEqualTo(listOf("c", "b", "a"))
   }
 
-  @Disabled("Not yet implemented")
   @Test
   fun `should close scoped local variable at end of enclosing block`() {
     val result = compileAndRunTest(
@@ -66,7 +65,6 @@ class KraiiLocalVariableTest {
     assertThat(result.stdout).contains("after-if")
   }
 
-  @Disabled("Not yet implemented")
   @Test
   fun `should close scoped local variable on each loop iteration`() {
     val result = compileAndRunTest(
