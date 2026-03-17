@@ -185,6 +185,7 @@ class KraiiLocalVariableTest {
           @Scoped val a = CountingResource("a")
           @Scoped val b = CountingResource("b")
           throw RuntimeException("boom")
+          @Scoped val c = CountingResource("c")
         } catch (e: RuntimeException) {
           println("caught: ${'$'}{e.message}")
         }
@@ -195,5 +196,28 @@ class KraiiLocalVariableTest {
     assertThat(result.initialized).isEqualTo(listOf("a", "b"))
     assertThat(result.closed).isEqualTo(listOf("b", "a"))
     assertThat(result.stdout).contains("caught: boom")
+  }
+
+  @Test
+  fun `should close scoped locals on uncaught exception`() {
+    val result = compileAndRunTest(
+      """
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+
+      fun testMain() {
+        @Scoped val a = CountingResource("a")
+        @Scoped val b = CountingResource("b")
+        throw RuntimeException("boom")
+        @Scoped val c = CountingResource("c")
+      }
+      """.trimIndent(),
+    )
+
+    assertThat(result.initialized).isEqualTo(listOf("a", "b"))
+    assertThat(result.closed).isEqualTo(listOf("b", "a"))
+    assertThat(
+      result.uncaughtException,
+    ).isEqualTo("java.lang.RuntimeException: boom")
   }
 }

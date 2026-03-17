@@ -18,6 +18,11 @@ data class TestExecutionResult(
    * Names of the [CountingResource]s which were closed.
    */
   val closed: List<String>,
+
+  /**
+   * The uncaught exception thrown by `testMain()`, if any.
+   */
+  val uncaughtException: String?,
 )
 
 /**
@@ -31,10 +36,18 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
   program.newSourceFile("main.kt") {
     """
     import kraii.util.CountingResource
-    
+
     fun main() {
-      testMain()
+      var uncaughtException: Throwable? = null
+      try {
+        testMain()
+      } catch (e: Throwable) {
+        uncaughtException = e
+      }
       println(CountingResource.serialize())
+      if (uncaughtException != null) {
+        println("UncaughtException=${'$'}{uncaughtException::class.qualifiedName}: ${'$'}{uncaughtException.message}")
+      }
     }
     """.trimIndent()
   }
@@ -46,9 +59,13 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
 
   val lines = program.execute("MainKt")
   val countingResourceStatus = CountingResource.deserialize(lines)
+  val uncaughtException = lines
+    .find { it.startsWith("UncaughtException=") }
+    ?.removePrefix("UncaughtException=")
   return TestExecutionResult(
     stdout = lines,
     initialized = countingResourceStatus.initialized,
     closed = countingResourceStatus.closed,
+    uncaughtException = uncaughtException,
   )
 }
