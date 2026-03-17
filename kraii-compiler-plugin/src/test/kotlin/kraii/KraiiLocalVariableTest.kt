@@ -84,33 +84,94 @@ class KraiiLocalVariableTest {
     assertThat(result.closed).isEqualTo(listOf("r1", "r2", "r3"))
   }
 
-  @Disabled("Not yet implemented")
   @Test
-  fun `should close scoped local variable on early return`() {
+  fun `should close scoped local variables on first return`() {
     val result = compileAndRunTest(
       """
       import kraii.api.Scoped
       import kraii.util.CountingResource
 
-      fun doWork(): String {
+      fun doWork(path: Int): String {
         @Scoped val a = CountingResource("a")
-        @Scoped val b = CountingResource("b")
-        if (true) {
-          return "early"
+        if (path == 1) {
+          return "first"
         }
-        println("unreachable")
+        @Scoped val b = CountingResource("b")
+        if (path == 2) {
+          return "second"
+        }
         @Scoped val c = CountingResource("c")
-        return "late"
+        return "third"
       }
 
       fun testMain() {
-        doWork()
+        doWork(1)
+      }
+      """.trimIndent(),
+    )
+
+    assertThat(result.initialized).isEqualTo(listOf("a"))
+    assertThat(result.closed).isEqualTo(listOf("a"))
+  }
+
+  @Test
+  fun `should close scoped local variables on second return`() {
+    val result = compileAndRunTest(
+      """
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+
+      fun doWork(path: Int): String {
+        @Scoped val a = CountingResource("a")
+        if (path == 1) {
+          return "first"
+        }
+        @Scoped val b = CountingResource("b")
+        if (path == 2) {
+          return "second"
+        }
+        @Scoped val c = CountingResource("c")
+        return "third"
+      }
+
+      fun testMain() {
+        doWork(2)
       }
       """.trimIndent(),
     )
 
     assertThat(result.initialized).isEqualTo(listOf("a", "b"))
     assertThat(result.closed).isEqualTo(listOf("b", "a"))
+  }
+
+  @Test
+  fun `should close scoped local variables on third return`() {
+    val result = compileAndRunTest(
+      """
+      import kraii.api.Scoped
+      import kraii.util.CountingResource
+
+      fun doWork(path: Int): String {
+        @Scoped val a = CountingResource("a")
+        if (path == 1) {
+          return "first"
+        }
+        @Scoped val b = CountingResource("b")
+        if (path == 2) {
+          return "second"
+        }
+        @Scoped val c = CountingResource("c")
+        return "third"
+      }
+
+      fun testMain() {
+        doWork(3)
+      }
+      """.trimIndent(),
+    )
+
+    assertThat(result.initialized).isEqualTo(listOf("a", "b", "c"))
+    assertThat(result.closed).isEqualTo(listOf("c", "b", "a"))
   }
 
   @Disabled("Not yet implemented")
