@@ -226,14 +226,17 @@ class KraiiCloseMethodBodyGenerator(
 
   private fun createFunctionType(paramType: IrType): IrType {
     val functionClass =
-      pluginContext.referenceClass(StandardNames.getFunctionClassId(1))
+      pluginContext
+        .finderForBuiltins()
+        .findClass(StandardNames.getFunctionClassId(1))
         ?: error("Cannot find Function1 class")
     return functionClass.typeWith(paramType, irBuiltIns.unitType)
   }
 
   private val iterableForEachSymbol: IrSimpleFunctionSymbol by lazy {
     pluginContext
-      .referenceFunctions(
+      .finderForBuiltins()
+      .findFunctions(
         CallableId(FqName("kotlin.collections"), Name.identifier("forEach")),
       ).single {
         it.owner.parameters
@@ -247,7 +250,8 @@ class KraiiCloseMethodBodyGenerator(
 
   private val iterableReversedSymbol: IrSimpleFunctionSymbol by lazy {
     pluginContext
-      .referenceFunctions(
+      .finderForBuiltins()
+      .findFunctions(
         CallableId(FqName("kotlin.collections"), Name.identifier("reversed")),
       ).single {
         it.owner.parameters

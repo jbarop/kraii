@@ -5,7 +5,7 @@ import kraii.autoCloseableClassId
 import kraii.closeName
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.DirectDeclarationsAccess
-import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
 import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
@@ -68,6 +68,6 @@ class KraiiAddCloseMethodExtension(
   @OptIn(SymbolInternals::class, DirectDeclarationsAccess::class)
   private fun FirClassSymbol<*>.hasCloseMethod(): Boolean =
     fir.declarations
-      .filterIsInstance<FirSimpleFunction>()
+      .filterIsInstance<FirNamedFunction>()
       .any { it.name == closeName && it.valueParameters.isEmpty() }
 }
