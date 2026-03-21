@@ -2,6 +2,7 @@ package kraii
 
 import kraii.util.compileAndRunTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -109,6 +110,107 @@ class KraiiLocalVariableTest {
 
       assertThat(result.closed).isEqualTo(listOf("r"))
       assertThat(result.stdout).contains("result=42")
+    }
+  }
+
+  @Nested
+  inner class Containers {
+
+    @Disabled("TODO")
+    @Test
+    fun `should close resources in scoped Iterable container`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+
+        fun testMain() {
+          @Scoped val container = listOf(
+            CountingResource("resource"),
+          )
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(listOf("resource"))
+      assertThat(result.closed).isEqualTo(listOf("resource"))
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should close resources in container in reverse element order`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+
+        fun testMain() {
+          @Scoped val container = listOf(
+            CountingResource("a"),
+            CountingResource("b"),
+            CountingResource("c"),
+          )
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(listOf("a", "b", "c"))
+      assertThat(result.closed).isEqualTo(listOf("c", "b", "a"))
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should close multiple containers in reverse declaration order`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+
+        fun testMain() {
+          @Scoped val container1 = listOf(
+            CountingResource("c1-a"),
+            CountingResource("c1-b"),
+          )
+          @Scoped val container2 = listOf(
+            CountingResource("c2-a"),
+            CountingResource("c2-b"),
+          )
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(
+        listOf("c1-a", "c1-b", "c2-a", "c2-b"),
+      )
+      assertThat(result.closed).isEqualTo(
+        listOf("c2-b", "c2-a", "c1-b", "c1-a"),
+      )
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should handle mixed direct variables and containers`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+
+        fun testMain() {
+          @Scoped val direct = CountingResource("direct")
+          @Scoped val container = listOf(
+            CountingResource("in-container-a"),
+            CountingResource("in-container-b"),
+          )
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(
+        listOf("direct", "in-container-a", "in-container-b"),
+      )
+      assertThat(result.closed).isEqualTo(
+        listOf("in-container-b", "in-container-a", "direct"),
+      )
     }
   }
 
@@ -602,6 +704,57 @@ class KraiiLocalVariableTest {
       assertThat(
         result.uncaughtException,
       ).isEqualTo("java.lang.RuntimeException: constructor failed")
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should close Iterable container when later constructor throws`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        import kraii.util.FailingResource
+
+        fun testMain() {
+          @Scoped val container = listOf(
+            CountingResource("a"),
+            CountingResource("b"),
+          )
+          @Scoped val failing = FailingResource()
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(listOf("a", "b"))
+      assertThat(result.closed).isEqualTo(listOf("b", "a"))
+      assertThat(
+        result.uncaughtException,
+      ).isEqualTo("java.lang.RuntimeException: constructor failed")
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should close remaining elements in container when one close throws`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        import kraii.util.FailingClose
+
+        fun testMain() {
+          @Scoped val container: List<AutoCloseable> = listOf(
+            CountingResource("a"),
+            FailingClose(),
+            CountingResource("c"),
+          )
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.closed).isEqualTo(listOf("c", "a"))
+      assertThat(
+        result.uncaughtException,
+      ).isEqualTo("java.lang.RuntimeException: close failed")
     }
   }
 
