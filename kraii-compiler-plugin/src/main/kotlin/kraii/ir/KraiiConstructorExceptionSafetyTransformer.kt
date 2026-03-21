@@ -4,35 +4,63 @@ import kraii.api.Scoped
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
-import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.irBlock
-import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irTry
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrProperty
-import org.jetbrains.kotlin.ir.declarations.IrValueParameter
-import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
-import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.impl.IrCatchImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrThrowImpl
-import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.util.properties
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
-import org.jetbrains.kotlin.name.Name
 
 /**
- * Adds exception safety to constructors of classes with multiple @Scoped properties.
+ * Adds exception safety to constructors of classes with multiple @Scoped
+ * properties.
  *
- * When a later property's initializer throws, all previously initialized @Scoped
- * properties are closed before the exception propagates.
+ * When a class has multiple @Scoped properties, a later property's initializer
+ * might throw an exception. Without this transformer, the earlier properties
+ * that were already successfully initialized would leak because no close() call
+ * would ever run.
+ *
+ * For each @Scoped property (starting from the second one), this transformer
+ * wraps the property initializer in a try-catch that closes all previously
+ * initialized @Scoped properties before rethrowing the exception.
+ *
+ * Example:
+ * ```
+ * class MyResource : AutoCloseable {
+ *   @Scoped val a = ResourceA()
+ *   @Scoped val b = ResourceB()
+ *   @Scoped val c = ResourceC()
+ * }
+ * ```
+ *
+ * This transformer rewrites the initializers to:
+ * ```
+ * class MyResource : AutoCloseable {
+ *   val a = ResourceA()
+ *   val b = try {
+ *     ResourceB()
+ *   } catch (e: Throwable) {
+ *     a.close();
+ *     throw e
+ *   }
+ *   val c = try {
+ *     ResourceC()
+ *   } catch (e: Throwable) {
+ *     b.close();
+ *     a.close();
+ *     throw e
+ *   }
+ * }
+ * ```
+ *
+ * Note: The first property (`a`) is not wrapped because there are no previous
+ * properties to clean up if its initializer throws.
  */
 class KraiiConstructorExceptionSafetyTransformer(
   private val pluginContext: IrPluginContext,
@@ -58,6 +86,9 @@ class KraiiConstructorExceptionSafetyTransformer(
       .filter { it.backingField?.initializer != null }
       .toList()
 
+    // Exception safety is only needed when there are at least two @Scoped
+    // properties. With a single property, there's nothing to clean up if
+    // the initializer throws.
     if (scopedProperties.size >= 2) {
       wrapInitializersWithTryCatch(declaration, scopedProperties)
     }
@@ -65,93 +96,79 @@ class KraiiConstructorExceptionSafetyTransformer(
     declaration.acceptChildrenVoid(this)
   }
 
+  /**
+   * Wraps each @Scoped property initializer (from the second onward) in a
+   * try-catch that closes all previously initialized @Scoped properties on
+   * failure.
+   */
   private fun wrapInitializersWithTryCatch(
     irClass: IrClass,
     scopedProperties: List<IrProperty>,
   ) {
-    val thisReceiver = irClass.thisReceiver ?: return
+    val thisReceiver = irClass.thisReceiver
+      ?: error("Class ${irClass.name} has no thisReceiver")
 
+    // Start from index 1: the first property has no predecessors to clean up.
     for (i in 1 until scopedProperties.size) {
       val property = scopedProperties[i]
-      val backingField = property.backingField ?: continue
-      val originalExpr = backingField.initializer?.expression ?: continue
+      val backingField = property.backingField
+        ?: error("@Scoped property ${property.name} has no backing field")
+      val originalInitializer = backingField.initializer?.expression
+        ?: error("@Scoped property ${property.name} has no initializer")
+
+      // All @Scoped properties that were initialized before this one.
+      // These need to be closed (in reverse order) if this initializer throws.
       val previousProperties = scopedProperties.subList(0, i)
 
       val builder = DeclarationIrBuilder(pluginContext, backingField.symbol)
 
-      val exceptionVar = IrVariableImpl(
-        UNDEFINED_OFFSET,
-        UNDEFINED_OFFSET,
-        IrDeclarationOrigin.CATCH_PARAMETER,
-        IrVariableSymbolImpl(),
-        Name.identifier("e"),
-        irBuiltIns.throwableType,
-        isVar = false,
-        isConst = false,
-        isLateinit = false,
-      )
-
-      val closeStatements = mutableListOf<IrStatement>()
-      for (prev in previousProperties.reversed()) {
-        val propertyType = prev.type
-        if (propertyType.implements(AutoCloseable::class)) {
-          val stmt = builder.buildCloseAutoCloseable(prev, thisReceiver)
-          if (stmt != null) closeStatements.add(stmt)
-        }
-        // Iterable<AutoCloseable> properties in catch blocks would need
+      // Build close calls for all previously initialized properties.
+      // Reverse order ensures LIFO cleanup (last initialized = first closed).
+      val closeStatements = previousProperties
+        .reversed()
+        .filter { it.type.implements(AutoCloseable::class) }
+        // TODO: Iterable<AutoCloseable> properties in catch blocks would need
         // forEach-based cleanup, but that is not yet implemented.
-      }
+        .map {
+          builder.buildCloseAutoCloseable(it, thisReceiver)
+        }
 
       if (closeStatements.isEmpty()) continue
 
-      val catchBody = builder.irBlock {
-        closeStatements.forEach { +it }
-        +IrThrowImpl(
-          UNDEFINED_OFFSET,
-          UNDEFINED_OFFSET,
-          irBuiltIns.nothingType,
-          irGet(exceptionVar),
-        )
-      }
-
-      val catch = IrCatchImpl(
-        startOffset = UNDEFINED_OFFSET,
-        endOffset = UNDEFINED_OFFSET,
-        catchParameter = exceptionVar,
-        result = catchBody,
-      )
-
+      // try {
+      //   <original initializer expression>
+      // } catch (e: Throwable) {
+      //   prevN.close(); ...; prev1.close()
+      //   throw e
+      // }
+      val catchParameter = buildCatchParameter(irBuiltIns.throwableType)
       val tryCatch = builder.irTry(
         type = backingField.type,
-        tryResult = originalExpr,
-        catches = listOf(catch),
+        tryResult = originalInitializer,
+        catches = listOf(
+          IrCatchImpl(
+            startOffset = catchParameter.startOffset,
+            endOffset = catchParameter.endOffset,
+            catchParameter = catchParameter,
+            result = builder.irBlock {
+              closeStatements.forEach { +it }
+              +buildThrow(
+                nothingType = irBuiltIns.nothingType,
+                exception = irGet(catchParameter),
+              )
+            },
+          ),
+        ),
         finallyExpression = null,
       )
 
+      // Replace the backing field's initializer with the try-catch-wrapped
+      // version.
       backingField.initializer = irFactory.createExpressionBody(
-        UNDEFINED_OFFSET,
-        UNDEFINED_OFFSET,
-        tryCatch,
+        startOffset = tryCatch.startOffset,
+        endOffset = tryCatch.endOffset,
+        expression = tryCatch,
       )
-    }
-  }
-
-  private fun IrBuilderWithScope.buildCloseAutoCloseable(
-    property: IrProperty,
-    thisReceiver: IrValueParameter,
-  ): IrStatement? {
-    val getter = property.getter ?: return null
-    val closeMethod = property.type.functionByName("close") ?: return null
-
-    val getProperty = irCall(
-      getter,
-      origin = IrStatementOrigin.GET_PROPERTY,
-    ).apply {
-      dispatchReceiver = irGet(thisReceiver)
-    }
-
-    return irCall(closeMethod).apply {
-      dispatchReceiver = getProperty
     }
   }
 }
