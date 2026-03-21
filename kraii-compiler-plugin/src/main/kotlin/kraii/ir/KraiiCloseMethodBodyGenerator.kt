@@ -115,9 +115,6 @@ class KraiiCloseMethodBodyGenerator(
     val builder = DeclarationIrBuilder(pluginContext, closeFunction.symbol)
     val statements = mutableListOf<IrStatement>()
 
-    // Preserve existing statements first
-    statements.addAll(existingStatements)
-
     val propertiesToClose = irClass.properties
       .filter { it.isAnnotatedWith(Scoped::class) }
       .toList()
@@ -190,14 +187,34 @@ class KraiiCloseMethodBodyGenerator(
       }
     }
 
-    if (closeStatements.size <= 1) {
-      // Single or no close call: no need for exception aggregation
-      statements.addAll(closeStatements)
-    } else {
-      // Multiple close calls: wrap each in try-catch with exception aggregation
+    val hasExistingBody = existingStatements.isNotEmpty()
+    val needsExceptionAggregation =
+      closeStatements.size > 1 ||
+        (hasExistingBody && closeStatements.isNotEmpty())
+
+    if (needsExceptionAggregation) {
+      // Wrap existing body (if any) and close calls in try-catch
+      // with exception aggregation (addSuppressed). This ensures
+      // that if the user body throws, cleanup still runs and close
+      // exceptions are suppressed rather than replacing the
+      // original.
+      val allStatements = mutableListOf<IrStatement>()
+      if (hasExistingBody) {
+        allStatements.add(
+          builder.irBlock {
+            existingStatements.forEach { +it }
+          },
+        )
+      }
+      allStatements.addAll(closeStatements)
       statements.addAll(
-        builder.wrapWithExceptionAggregation(closeStatements, closeFunction),
+        builder.wrapWithExceptionAggregation(allStatements, closeFunction),
       )
+    } else {
+      // No existing body with at most one close call: no need for
+      // exception aggregation.
+      statements.addAll(existingStatements)
+      statements.addAll(closeStatements)
     }
 
     return irFactory.createBlockBody(

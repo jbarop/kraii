@@ -525,7 +525,6 @@ class KraiiPropertyTest {
     // When the user's close() body and a @Scoped close() both throw,
     // the body exception propagates and the close exception is added
     // via addSuppressed() (Java try-with-resources semantics).
-    @Disabled("TODO")
     @Test
     fun `should suppress close exceptions and propagate original`() {
       val result = compileAndRunTest(
