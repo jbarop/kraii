@@ -12,6 +12,9 @@ class KraiiIrGenerationExtension : IrGenerationExtension {
     pluginContext: IrPluginContext,
   ) {
     moduleFragment.acceptChildrenVoid(
+      KraiiConstructorExceptionSafetyTransformer(pluginContext),
+    )
+    moduleFragment.acceptChildrenVoid(
       KraiiCloseMethodBodyGenerator(pluginContext),
     )
     moduleFragment.transform(

@@ -445,7 +445,6 @@ class KraiiPropertyTest {
   @Nested
   inner class ExceptionSafety {
 
-    @Disabled("TODO")
     @Test
     fun `should close first property when second constructor throws`() {
       val result = compileAndRunTest(
