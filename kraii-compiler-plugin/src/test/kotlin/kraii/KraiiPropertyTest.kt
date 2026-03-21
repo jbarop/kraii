@@ -494,7 +494,6 @@ class KraiiPropertyTest {
         .isEqualTo("java.lang.RuntimeException: close failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close remaining properties when one close throws`() {
       val result = compileAndRunTest(

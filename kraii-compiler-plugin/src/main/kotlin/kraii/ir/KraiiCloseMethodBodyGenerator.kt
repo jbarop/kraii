@@ -12,8 +12,16 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
+import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
+import org.jetbrains.kotlin.ir.builders.irEqualsNull
 import org.jetbrains.kotlin.ir.builders.irGet
+import org.jetbrains.kotlin.ir.builders.irIfThen
+import org.jetbrains.kotlin.ir.builders.irIfThenElse
+import org.jetbrains.kotlin.ir.builders.irNotEquals
+import org.jetbrains.kotlin.ir.builders.irNull
+import org.jetbrains.kotlin.ir.builders.irSet
+import org.jetbrains.kotlin.ir.builders.irTry
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
@@ -22,15 +30,22 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.createBlockBody
+import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.impl.IrCatchImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrThrowImpl
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
+import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
+import org.jetbrains.kotlin.ir.types.getClass
+import org.jetbrains.kotlin.ir.types.makeNullable
 import org.jetbrains.kotlin.ir.types.typeOrNull
 import org.jetbrains.kotlin.ir.types.typeWith
+import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.kotlinFqName
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.properties
@@ -110,6 +125,8 @@ class KraiiCloseMethodBodyGenerator(
 
     val thisReceiver = closeFunction.dispatchReceiverParameter!!
 
+    val closeStatements = mutableListOf<IrStatement>()
+
     for (property in propertiesToClose) {
       val propertyType = property.type
 
@@ -130,7 +147,7 @@ class KraiiCloseMethodBodyGenerator(
           dispatchReceiver = getProperty
         }
 
-        statements.add(callClose)
+        closeStatements.add(callClose)
       } else if (propertyType.implements(Iterable::class)) {
         // Iterable<AutoCloseable>: call property.reversed().forEach { it.close() }
         val getter = property.getter ?: continue
@@ -169,8 +186,18 @@ class KraiiCloseMethodBodyGenerator(
           }
         }
 
-        statements.add(forEachCall)
+        closeStatements.add(forEachCall)
       }
+    }
+
+    if (closeStatements.size <= 1) {
+      // Single or no close call: no need for exception aggregation
+      statements.addAll(closeStatements)
+    } else {
+      // Multiple close calls: wrap each in try-catch with exception aggregation
+      statements.addAll(
+        builder.wrapWithExceptionAggregation(closeStatements, closeFunction),
+      )
     }
 
     return irFactory.createBlockBody(
@@ -178,6 +205,112 @@ class KraiiCloseMethodBodyGenerator(
       UNDEFINED_OFFSET,
       statements,
     )
+  }
+
+  /**
+   * Wraps close statements in try-catch blocks with exception aggregation.
+   *
+   * Generates:
+   * ```
+   * var exception: Throwable? = null
+   * try { close1() } catch (e) { exception = e }
+   * try { close2() } catch (e) { if (exception == null) exception = e else exception.addSuppressed(e) }
+   * ...
+   * if (exception != null) throw exception
+   * ```
+   */
+  private fun IrBuilderWithScope.wrapWithExceptionAggregation(
+    closeStatements: List<IrStatement>,
+    closeFunction: IrSimpleFunction,
+  ): List<IrStatement> {
+    val result = mutableListOf<IrStatement>()
+
+    // var exception: Throwable? = null
+    val exceptionVar = IrVariableImpl(
+      UNDEFINED_OFFSET,
+      UNDEFINED_OFFSET,
+      IrDeclarationOrigin.DEFINED,
+      IrVariableSymbolImpl(),
+      Name.identifier("\$closeException"),
+      irBuiltIns.throwableType.makeNullable(),
+      isVar = true,
+      isConst = false,
+      isLateinit = false,
+    ).apply {
+      initializer = irNull()
+      parent = closeFunction
+    }
+    result.add(exceptionVar)
+
+    val addSuppressedMethod = irBuiltIns.throwableType
+      .getClass()
+      ?.functions
+      ?.firstOrNull { it.name == Name.identifier("addSuppressed") }
+
+    for (closeStatement in closeStatements) {
+      val catchParam = IrVariableImpl(
+        UNDEFINED_OFFSET,
+        UNDEFINED_OFFSET,
+        IrDeclarationOrigin.CATCH_PARAMETER,
+        IrVariableSymbolImpl(),
+        Name.identifier("e"),
+        irBuiltIns.throwableType,
+        isVar = false,
+        isConst = false,
+        isLateinit = false,
+      ).apply {
+        parent = closeFunction
+      }
+
+      val catchBody = if (addSuppressedMethod != null) {
+        // if (exception == null) exception = e
+        // else exception!!.addSuppressed(e)
+        irIfThenElse(
+          type = irBuiltIns.unitType,
+          condition = irEqualsNull(irGet(exceptionVar)),
+          thenPart = irSet(exceptionVar, irGet(catchParam)),
+          elsePart = irCall(addSuppressedMethod).apply {
+            dispatchReceiver = irGet(exceptionVar)
+            arguments[1] = irGet(catchParam)
+          },
+        )
+      } else {
+        // Fallback: just replace exception
+        irSet(exceptionVar, irGet(catchParam))
+      }
+
+      val catch = IrCatchImpl(
+        startOffset = UNDEFINED_OFFSET,
+        endOffset = UNDEFINED_OFFSET,
+        catchParameter = catchParam,
+        result = catchBody,
+      )
+
+      val tryCatch = irTry(
+        type = irBuiltIns.unitType,
+        tryResult = irBlock { +closeStatement },
+        catches = listOf(catch),
+        finallyExpression = null,
+      )
+
+      result.add(tryCatch)
+    }
+
+    // if (exception != null) throw exception
+    val rethrow = irIfThen(
+      irBuiltIns.unitType,
+      irNotEquals(irGet(exceptionVar), irNull()),
+      IrThrowImpl(
+        UNDEFINED_OFFSET,
+        UNDEFINED_OFFSET,
+        irBuiltIns.nothingType,
+        irGet(exceptionVar),
+      ),
+    )
+
+    result.add(rethrow)
+
+    return result
   }
 
   @Suppress("DEPRECATION")
