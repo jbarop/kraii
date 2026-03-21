@@ -472,6 +472,37 @@ class KraiiPropertyTest {
         .isEqualTo("java.lang.RuntimeException: constructor failed")
     }
 
+    @Disabled("TODO")
+    @Test
+    fun `should close Iterable container when later constructor throws`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        import kraii.util.FailingResource
+
+        class Root : AutoCloseable {
+          @Scoped
+          private val container = listOf(
+            CountingResource("a"),
+            CountingResource("b"),
+          )
+          @Scoped
+          private val failing = FailingResource()
+        }
+
+        fun testMain() {
+          Root()
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.initialized).isEqualTo(listOf("a", "b"))
+      assertThat(result.closed).isEqualTo(listOf("b", "a"))
+      assertThat(result.uncaughtException)
+        .isEqualTo("java.lang.RuntimeException: constructor failed")
+    }
+
     @Test
     fun `should propagate exception when close throws`() {
       val result = compileAndRunTest(
@@ -509,6 +540,35 @@ class KraiiPropertyTest {
           private val b = FailingClose()
           @Scoped
           private val c = CountingResource("c")
+        }
+
+        fun testMain() {
+          Root().close()
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.closed).isEqualTo(listOf("c", "a"))
+      assertThat(result.uncaughtException)
+        .isEqualTo("java.lang.RuntimeException: close failed")
+    }
+
+    @Disabled("TODO")
+    @Test
+    fun `should close remaining elements in container when one close throws`() {
+      val result = compileAndRunTest(
+        """
+        import kraii.api.Scoped
+        import kraii.util.CountingResource
+        import kraii.util.FailingClose
+
+        class Root : AutoCloseable {
+          @Scoped
+          private val container: List<AutoCloseable> = listOf(
+            CountingResource("a"),
+            FailingClose(),
+            CountingResource("c"),
+          )
         }
 
         fun testMain() {
