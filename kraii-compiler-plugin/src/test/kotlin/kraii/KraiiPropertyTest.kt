@@ -2,7 +2,6 @@ package kraii
 
 import kraii.util.compileAndRunTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -552,7 +551,6 @@ class KraiiPropertyTest {
         .isEqualTo("java.lang.RuntimeException: close failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close remaining elements in container when one close throws`() {
       val result = compileAndRunTest(
@@ -619,7 +617,6 @@ class KraiiPropertyTest {
       assertThat(result.stdout).contains("suppressed: close failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close all properties when multiple closes throw`() {
       val result = compileAndRunTest(

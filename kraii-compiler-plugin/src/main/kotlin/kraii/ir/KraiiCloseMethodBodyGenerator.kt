@@ -52,7 +52,8 @@ import org.jetbrains.kotlin.name.Name
  * - `AutoCloseable`:
  *   generates `property.close()`
  * - `Iterable<AutoCloseable>`:
- *   generates `property.reversed().forEach { it.close() }`
+ *   generates an exception-safe loop that closes each element individually,
+ *   aggregating exceptions via `addSuppressed()`
  *
  * When there are multiple close calls (or a user body + close calls), all
  * operations are wrapped with exception aggregation so that a failing close
@@ -220,7 +221,6 @@ class KraiiCloseMethodBodyGenerator(
           pluginContext = pluginContext,
           property = property,
           receiver = thisReceiver,
-          lambdaParent = closeFunction,
         )
 
       else -> error(
