@@ -472,7 +472,6 @@ class KraiiPropertyTest {
         .isEqualTo("java.lang.RuntimeException: constructor failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close Iterable container when later constructor throws`() {
       val result = compileAndRunTest(

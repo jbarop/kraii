@@ -28,7 +28,9 @@ import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
  *
  * For each @Scoped property (starting from the second one), this transformer
  * wraps the property initializer in a try-catch that closes all previously
- * initialized @Scoped properties before rethrowing the exception.
+ * initialized @Scoped properties before rethrowing the exception. Both
+ * `AutoCloseable` properties (via `close()`) and `Iterable<AutoCloseable>`
+ * properties (via `reversed().forEach { it.close() }`) are handled.
  *
  * Example:
  * ```
@@ -126,11 +128,26 @@ class KraiiConstructorExceptionSafetyTransformer(
       // Reverse order ensures LIFO cleanup (last initialized = first closed).
       val closeStatements = previousProperties
         .reversed()
-        .filter { it.type.implements(AutoCloseable::class) }
-        // TODO: Iterable<AutoCloseable> properties in catch blocks would need
-        // forEach-based cleanup, but that is not yet implemented.
-        .map {
-          builder.buildCloseAutoCloseable(it, thisReceiver)
+        .map { prev ->
+          when {
+            prev.type.implements(AutoCloseable::class) ->
+              // prev.close()
+              builder.buildCloseAutoCloseable(prev, thisReceiver)
+
+            prev.type.implements(Iterable::class) ->
+              // prev.reversed().forEach { it.close() }
+              builder.buildCloseIterable(
+                pluginContext,
+                prev,
+                thisReceiver,
+                lambdaParent = irClass,
+              )
+
+            else -> error(
+              "@Scoped property ${prev.name} is neither AutoCloseable" +
+                " nor Iterable<AutoCloseable>",
+            )
+          }
         }
 
       if (closeStatements.isEmpty()) continue
@@ -138,7 +155,7 @@ class KraiiConstructorExceptionSafetyTransformer(
       // try {
       //   <original initializer expression>
       // } catch (e: Throwable) {
-      //   prevN.close(); ...; prev1.close()
+      //   [closeStatements]
       //   throw e
       // }
       val catchParameter = buildCatchParameter(irBuiltIns.throwableType)
