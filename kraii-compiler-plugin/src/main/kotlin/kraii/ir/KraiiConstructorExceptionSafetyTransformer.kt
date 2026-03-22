@@ -140,7 +140,6 @@ class KraiiConstructorExceptionSafetyTransformer(
                 pluginContext,
                 prev,
                 thisReceiver,
-                lambdaParent = irClass,
               )
 
             else -> error(
