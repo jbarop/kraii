@@ -1,25 +1,38 @@
 package kraii.ir
 
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.builtins.StandardNames
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.UNDEFINED_OFFSET
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
+import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.createBlockBody
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
+import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrThrowImpl
+import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrVariableSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.getClass
+import org.jetbrains.kotlin.ir.types.typeOrNull
+import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.functions
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.ir.util.superTypes
+import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import kotlin.reflect.KClass
@@ -94,6 +107,132 @@ fun IrBuilderWithScope.buildCloseAutoCloseable(
     dispatchReceiver = getProperty
   }
 }
+
+/**
+ * Builds IR for closing all elements in an `Iterable<AutoCloseable>`
+ * property on a receiver.
+ *
+ * Generates: `receiver.property.reversed().forEach { it.close() }`
+ *
+ * @param pluginContext the compiler plugin context for symbol resolution
+ * @param property the `Iterable<AutoCloseable>` property to close
+ * @param receiver the receiver (`this`) to read the property from
+ * @param lambdaParent the parent declaration for the generated lambda
+ *   (e.g. the `close()` function or the class containing the property)
+ */
+@Suppress("DEPRECATION")
+fun IrBuilderWithScope.buildCloseIterable(
+  pluginContext: IrPluginContext,
+  property: IrProperty,
+  receiver: IrValueParameter,
+  lambdaParent: IrDeclarationParent,
+): IrStatement {
+  val irFactory = pluginContext.irFactory
+  val irBuiltIns = pluginContext.irBuiltIns
+
+  val getter = property.getter
+    ?: error("Property ${property.name} has no getter")
+  val elementType = property.type
+    .arguments
+    .first()
+    .typeOrNull
+    ?: error(
+      "Cannot resolve type argument for Iterable property ${property.name}",
+    )
+
+  val closeMethod = elementType.functionByName("close")
+    ?: error("close() method not found on $elementType")
+
+  // { it: T -> it.close() }
+  val lambda = irFactory
+    .buildFun {
+      name = Name.special("<anonymous>")
+      returnType = irBuiltIns.unitType
+      origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+      visibility = DescriptorVisibilities.LOCAL
+    }.apply {
+      val itParam = irFactory
+        .createValueParameter(
+          startOffset = UNDEFINED_OFFSET,
+          endOffset = UNDEFINED_OFFSET,
+          origin = IrDeclarationOrigin.DEFINED,
+          kind = IrParameterKind.Regular,
+          name = Name.identifier("it"),
+          type = elementType,
+          isAssignable = false,
+          symbol = IrValueParameterSymbolImpl(),
+          varargElementType = null,
+          isCrossinline = false,
+          isNoinline = false,
+          isHidden = false,
+        ).also { it.parent = this }
+
+      parameters = listOf(itParam)
+
+      body = irFactory.createBlockBody(
+        startOffset = UNDEFINED_OFFSET,
+        endOffset = UNDEFINED_OFFSET,
+        statements = listOf(
+          irCall(closeMethod).apply {
+            dispatchReceiver = irGet(itParam)
+          },
+        ),
+      )
+    }
+
+  val functionClass =
+    pluginContext
+      .finderForBuiltins()
+      .findClass(StandardNames.getFunctionClassId(1))
+      ?: error("Cannot find Function1 class")
+  val functionType = functionClass.typeWith(elementType, irBuiltIns.unitType)
+
+  val reversedSymbol = findIterableExtensionSymbol(pluginContext, "reversed")
+  val forEachSymbol = findIterableExtensionSymbol(pluginContext, "forEach")
+
+  // property.reversed().forEach { it.close() }
+  return irCall(forEachSymbol).apply {
+    // Extension receiver at index 0
+    arguments[0] = irCall(reversedSymbol)
+      .apply {
+        // this.property
+        arguments[0] = irCall(
+          getter,
+          origin = IrStatementOrigin.GET_PROPERTY,
+        ).apply {
+          dispatchReceiver = irGet(receiver)
+        }
+      }
+    typeArguments[0] = elementType
+    arguments[1] = IrFunctionExpressionImpl(
+      startOffset = UNDEFINED_OFFSET,
+      endOffset = UNDEFINED_OFFSET,
+      type = functionType,
+      function = lambda,
+      origin = IrStatementOrigin.LAMBDA,
+    ).also {
+      lambda.patchDeclarationParents(lambdaParent)
+    }
+  }
+}
+
+/**
+ * Finds an extension function on `Iterable` from `kotlin.collections` by
+ * name (e.g. `"forEach"`, `"reversed"`).
+ */
+private fun findIterableExtensionSymbol(
+  pluginContext: IrPluginContext,
+  functionName: String,
+) = pluginContext
+  .finderForBuiltins()
+  .findFunctions(
+    CallableId(FqName("kotlin.collections"), Name.identifier(functionName)),
+  ).single { symbol ->
+    symbol.owner.parameters.any { param ->
+      param.kind == IrParameterKind.ExtensionReceiver &&
+        param.type.getClass() == pluginContext.irBuiltIns.iterableClass.owner
+    }
+  }
 
 /**
  * Creates an IR variable for use as a catch parameter.
