@@ -120,7 +120,6 @@ fun IrBuilderWithScope.buildCloseAutoCloseable(
  * @param lambdaParent the parent declaration for the generated lambda
  *   (e.g. the `close()` function or the class containing the property)
  */
-@Suppress("DEPRECATION")
 fun IrBuilderWithScope.buildCloseIterable(
   pluginContext: IrPluginContext,
   property: IrProperty,
