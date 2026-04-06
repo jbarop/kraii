@@ -116,7 +116,6 @@ class KraiiLocalVariableTest {
   @Nested
   inner class Containers {
 
-    @Disabled("TODO")
     @Test
     fun `should close resources in scoped Iterable container`() {
       val result = compileAndRunTest(

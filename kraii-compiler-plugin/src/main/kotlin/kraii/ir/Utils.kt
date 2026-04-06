@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.declarations.impl.IrVariableImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
@@ -192,6 +193,172 @@ fun IrBuilderWithScope.buildCloseIterable(
         ).apply {
           dispatchReceiver = irGet(receiver)
         }
+      },
+      nameHint = $$"$reversed",
+    )
+
+    // var $closeException: Throwable? = null
+    val declarationParent = scope.getLocalDeclarationParent()
+    val exceptionVar = IrVariableImpl(
+      startOffset = UNDEFINED_OFFSET,
+      endOffset = UNDEFINED_OFFSET,
+      origin = IrDeclarationOrigin.DEFINED,
+      symbol = IrVariableSymbolImpl(),
+      name = Name.identifier($$"$closeException"),
+      type = irBuiltIns.throwableType.makeNullable(),
+      isVar = true,
+      isConst = false,
+      isLateinit = false,
+    ).also {
+      it.parent = declarationParent
+      it.initializer = irNull()
+    }
+    +exceptionVar
+
+    // val $iterator = $reversed.iterator()
+    val iteratorVar = createTmpVariable(
+      irExpression = irCall(iteratorFn).apply {
+        dispatchReceiver = irGet(reversedVar)
+      },
+      nameHint = $$"$iterator",
+    )
+
+    // while ($iterator.hasNext()) { ... }
+    +irWhile().apply {
+      // $iterator.hasNext()
+      condition = irCall(hasNextFn).apply {
+        dispatchReceiver = irGet(iteratorVar)
+      }
+      body = irBlock {
+        // val $element = $iterator.next()
+        val elementVar = createTmpVariable(
+          irExpression = irCall(nextFn).apply {
+            dispatchReceiver = irGet(iteratorVar)
+          },
+          nameHint = $$"$element",
+          irType = elementType,
+        )
+
+        val catchParam = buildCatchParameter(irBuiltIns.throwableType).also {
+          it.parent = declarationParent
+        }
+
+        // try { $element.close() }
+        // catch (e: Throwable) {
+        //   if ($closeException == null) $closeException = e
+        //   else $closeException.addSuppressed(e)
+        // }
+        +irTry(
+          type = irBuiltIns.unitType,
+          tryResult = irCall(closeMethod).apply {
+            dispatchReceiver = irGet(elementVar)
+          },
+          catches = listOf(
+            IrCatchImpl(
+              startOffset = UNDEFINED_OFFSET,
+              endOffset = UNDEFINED_OFFSET,
+              catchParameter = catchParam,
+              result = irIfThenElse(
+                type = irBuiltIns.unitType,
+                condition = irEqualsNull(irGet(exceptionVar)),
+                thenPart = irSet(exceptionVar, irGet(catchParam)),
+                elsePart = irCall(addSuppressedMethod).apply {
+                  dispatchReceiver = irGet(exceptionVar)
+                  arguments[1] = irGet(catchParam)
+                },
+              ),
+            ),
+          ),
+          finallyExpression = null,
+        )
+      }
+    }
+
+    // if ($closeException != null) throw $closeException
+    +irIfThen(
+      type = irBuiltIns.unitType,
+      condition = irNotEquals(irGet(exceptionVar), irNull()),
+      thenPart = buildThrow(
+        nothingType = irBuiltIns.nothingType,
+        exception = irGet(exceptionVar),
+      ),
+    )
+  }
+}
+
+/**
+ * Builds IR for closing all elements in an `Iterable<AutoCloseable>`
+ * local variable, with per-element exception safety.
+ *
+ * Each element's `close()` is wrapped in a try-catch so that a failing
+ * close doesn't prevent remaining elements from being closed. Exceptions
+ * are aggregated via `addSuppressed()`.
+ *
+ * Generates:
+ * ```
+ * val $reversed = variable.reversed()
+ * var $closeException: Throwable? = null
+ * val $iterator = $reversed.iterator()
+ * while ($iterator.hasNext()) {
+ *     val $element = $iterator.next()
+ *     try {
+ *         $element.close()
+ *     } catch (e: Throwable) {
+ *         if ($closeException == null) $closeException = e
+ *         else $closeException.addSuppressed(e)
+ *     }
+ * }
+ * if ($closeException != null) throw $closeException
+ * ```
+ *
+ * @param pluginContext the compiler plugin context for symbol resolution
+ * @param variable the `Iterable<AutoCloseable>` local variable to close
+ */
+fun IrBuilderWithScope.buildCloseIterableVariable(
+  pluginContext: IrPluginContext,
+  variable: IrVariable,
+): IrStatement {
+  val irBuiltIns = pluginContext.irBuiltIns
+  val variableType = variable.type as IrSimpleType
+
+  val elementType = variableType
+    .arguments
+    .first()
+    .typeOrNull
+    ?: error(
+      "Cannot resolve type argument for Iterable" +
+        " variable ${variable.name}",
+    )
+
+  val closeMethod = elementType.functionByName("close")
+    ?: error("close() method not found on $elementType")
+
+  val reversedSymbol = findIterableExtensionSymbol(pluginContext, "reversed")
+
+  val iteratorFn = irBuiltIns.iterableClass.owner.functions.single {
+    it.name == OperatorNameConventions.ITERATOR
+  }
+  val hasNextFn = irBuiltIns.iteratorClass.owner.functions.single {
+    it.name == OperatorNameConventions.HAS_NEXT
+  }
+  val nextFn = irBuiltIns.iteratorClass.owner.functions.single {
+    it.name == OperatorNameConventions.NEXT
+  }
+
+  val addSuppressedMethod = irBuiltIns.throwableType
+    .getClass()
+    ?.functions
+    ?.firstOrNull { it.name == Name.identifier("addSuppressed") }
+    ?: error(
+      "Throwable.addSuppressed() not found. " +
+        "kraii requires a JVM target that provides this method.",
+    )
+
+  return irBlock {
+    // val $reversed = variable.reversed()
+    val reversedVar = createTmpVariable(
+      irExpression = irCall(reversedSymbol).apply {
+        arguments[0] = irGet(variable)
       },
       nameHint = $$"$reversed",
     )

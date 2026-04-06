@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.ir.declarations.IrVariable
 import org.jetbrains.kotlin.ir.expressions.IrBlock
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.FqName
@@ -111,11 +112,6 @@ class KraiiLocalVariableCloseInserter(
       if (!isScopedVariable(stmt)) continue
       val variable = stmt as IrVariable
 
-      val closeMethod = variable.type.functionByName("close")
-        ?: error(
-          "close() not found on type ${variable.type}" +
-            " for @Scoped variable ${variable.name}",
-        )
       val builder = DeclarationIrBuilder(pluginContext, variable.symbol)
 
       // Extract all statements after the @Scoped variable declaration.
@@ -125,11 +121,11 @@ class KraiiLocalVariableCloseInserter(
       // try {
       //   <statements after @Scoped variable>
       // } finally {
-      //   variable.close()
+      //   <close logic for variable>
       // }
       //
       // The statement list becomes:
-      // [..., @Scoped val x = ..., try { ... } finally { x.close() }]
+      // [..., @Scoped val x = ..., try { ... } finally { ... }]
       statements.add(
         builder.irTry(
           type = pluginContext.irBuiltIns.unitType,
@@ -137,16 +133,51 @@ class KraiiLocalVariableCloseInserter(
             statementsAfter.forEach { +it }
           },
           catches = emptyList(),
-          finallyExpression = builder.irBlock {
-            // variable.close()
-            +irCall(closeMethod).apply {
-              dispatchReceiver = irGet(variable)
-            }
-          },
+          finallyExpression = buildFinallyBlock(variable, builder),
         ),
       )
     }
   }
+
+  /**
+   * Builds the finally-block expression for a @Scoped local variable.
+   *
+   * - `AutoCloseable` -> `variable.close()`
+   * - `Iterable<AutoCloseable>` -> reversed iteration with per-element
+   *   exception-safe close and `addSuppressed()` aggregation
+   */
+  private fun buildFinallyBlock(
+    variable: IrVariable,
+    builder: DeclarationIrBuilder,
+  ): IrExpression =
+    when {
+      variable.type.implements(AutoCloseable::class) -> {
+        val closeMethod = variable.type.functionByName("close")
+          ?: error(
+            "close() not found on type ${variable.type}" +
+              " for @Scoped variable ${variable.name}",
+          )
+        // variable.close()
+        builder.irBlock {
+          +irCall(closeMethod).apply {
+            dispatchReceiver = irGet(variable)
+          }
+        }
+      }
+
+      variable.type.implements(Iterable::class) ->
+        // variable.reversed().forEach { it.close() }
+        // (with per-element exception aggregation)
+        builder.buildCloseIterableVariable(
+          pluginContext = pluginContext,
+          variable = variable,
+        ) as IrExpression
+
+      else -> error(
+        "@Scoped variable ${variable.name} is neither AutoCloseable nor" +
+          " Iterable<AutoCloseable>",
+      )
+    }
 
   /**
    * Removes and returns all statements from [fromIndex] to the end of the list.
