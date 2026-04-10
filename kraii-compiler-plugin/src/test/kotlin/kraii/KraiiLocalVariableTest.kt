@@ -2,7 +2,6 @@ package kraii
 
 import kraii.util.compileAndRunTest
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -135,7 +134,6 @@ class KraiiLocalVariableTest {
       assertThat(result.closed).isEqualTo(listOf("resource"))
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close resources in container in reverse element order`() {
       val result = compileAndRunTest(
@@ -157,7 +155,6 @@ class KraiiLocalVariableTest {
       assertThat(result.closed).isEqualTo(listOf("c", "b", "a"))
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close multiple containers in reverse declaration order`() {
       val result = compileAndRunTest(
@@ -186,7 +183,6 @@ class KraiiLocalVariableTest {
       )
     }
 
-    @Disabled("TODO")
     @Test
     fun `should handle mixed direct variables and containers`() {
       val result = compileAndRunTest(
@@ -705,7 +701,6 @@ class KraiiLocalVariableTest {
       ).isEqualTo("java.lang.RuntimeException: constructor failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close Iterable container when later constructor throws`() {
       val result = compileAndRunTest(
@@ -731,7 +726,6 @@ class KraiiLocalVariableTest {
       ).isEqualTo("java.lang.RuntimeException: constructor failed")
     }
 
-    @Disabled("TODO")
     @Test
     fun `should close remaining elements in container when one close throws`() {
       val result = compileAndRunTest(
