@@ -21,7 +21,29 @@ class KraiiCompilerPluginRegistrar : CompilerPluginRegistrar() {
   ) {
     val messageCollector = configuration.get(MESSAGE_COLLECTOR_KEY, NONE)
     messageCollector.report(INFO, "kRAII Kotlin plugin active")
-    FirExtensionRegistrarAdapter.registerExtension(KraiiFirExtensionRegistrar())
-    IrGenerationExtension.registerExtension(KraiiIrGenerationExtension())
+    registerExtension(
+      FirExtensionRegistrarAdapter,
+      KraiiFirExtensionRegistrar(),
+    )
+    registerExtension(
+      IrGenerationExtension,
+      KraiiIrGenerationExtension(),
+    )
   }
+}
+
+/**
+ * Registers a compiler plugin extension via reflection to avoid a
+ * binary incompatibility between the public Kotlin compiler and
+ * IntelliJ's bundled analysis engine.
+ *
+ * See https://youtrack.jetbrains.com/issue/KTIJ-38372
+ */
+private fun CompilerPluginRegistrar.ExtensionStorage.registerExtension(
+  descriptor: Any,
+  extension: Any,
+) {
+  val method = this::class.java.methods
+    .first { it.name == "registerExtension" }
+  method.invoke(this, descriptor, extension)
 }
