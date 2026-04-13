@@ -53,8 +53,12 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
   }
   program.newSourceFile("TestCase.kt") { testSourceContent }
 
-  if (!program.compile()) {
-    fail { "Compilation of test source failed :-(" }
+  val compilationResult = program.compile()
+  if (!compilationResult.success) {
+    fail {
+      "Compilation of test source failed:\n" +
+        compilationResult.errors.joinToString("\n")
+    }
   }
 
   val lines = program.execute("MainKt")
@@ -68,4 +72,14 @@ fun compileAndRunTest(testSourceContent: String): TestExecutionResult {
     closed = countingResourceStatus.closed,
     uncaughtException = uncaughtException,
   )
+}
+
+/**
+ * Compiles the given Kotlin source with the plugin active and returns
+ * the [CompilationResult].
+ */
+fun compile(testSourceContent: String): CompilationResult {
+  val program = TestProgram()
+  program.newSourceFile("TestCase.kt") { testSourceContent }
+  return program.compile()
 }

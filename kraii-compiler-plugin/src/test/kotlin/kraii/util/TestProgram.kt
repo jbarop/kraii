@@ -1,8 +1,9 @@
 package kraii.util
 
 import org.jetbrains.kotlin.cli.common.ExitCode
-import org.jetbrains.kotlin.cli.common.messages.MessageRenderer.PLAIN_FULL_PATHS
-import org.jetbrains.kotlin.cli.common.messages.PrintingMessageCollector
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSourceLocation
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.config.Services
 import kotlin.io.path.createTempDirectory
@@ -31,14 +32,11 @@ class TestProgram {
     file.writeText(fileContent())
   }
 
-  fun compile(): Boolean {
+  fun compile(): CompilationResult {
+    val collector = CapturingMessageCollector()
     val kotlinCompiler = K2JVMCompiler()
-    val result = kotlinCompiler.exec(
-      messageCollector = PrintingMessageCollector(
-        System.out,
-        PLAIN_FULL_PATHS,
-        true,
-      ),
+    val exitCode = kotlinCompiler.exec(
+      messageCollector = collector,
       services = Services.EMPTY,
       arguments = kotlinCompiler.createArguments().also { args ->
         args.noStdlib = true
@@ -53,7 +51,10 @@ class TestProgram {
       },
     )
 
-    return result == ExitCode.OK
+    return CompilationResult(
+      success = exitCode == ExitCode.OK,
+      errors = collector.errors,
+    )
   }
 
   fun execute(mainClass: String): List<String> {
@@ -80,5 +81,31 @@ class TestProgram {
     }
 
     return process.inputStream.bufferedReader().readLines()
+  }
+}
+
+data class CompilationResult(
+  val success: Boolean,
+  val errors: List<String>,
+)
+
+private class CapturingMessageCollector : MessageCollector {
+
+  val errors = mutableListOf<String>()
+
+  override fun clear() {
+    errors.clear()
+  }
+
+  override fun hasErrors(): Boolean = errors.isNotEmpty()
+
+  override fun report(
+    severity: CompilerMessageSeverity,
+    message: String,
+    location: CompilerMessageSourceLocation?,
+  ) {
+    if (severity.isError) {
+      errors.add(message)
+    }
   }
 }

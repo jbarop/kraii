@@ -14,4 +14,9 @@ val autoCloseableClassId = ClassId(
   Name.identifier("AutoCloseable"),
 )
 
+val scopedClassId = ClassId(
+  FqName("kraii.api"),
+  Name.identifier("Scoped"),
+)
+
 val closeName = Name.identifier("close")
