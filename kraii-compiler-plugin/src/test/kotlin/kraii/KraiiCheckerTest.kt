@@ -56,9 +56,34 @@ class KraiiCheckerTest {
   }
 
   @Nested
+  inner class ScopedMustNotAlias {
+
+    @Test
+    fun `should reject assigning @Scoped variable to another @Scoped local`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          @Scoped val alias = resource
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains(
+          "@Scoped variable must not be initialized from another @Scoped variable",
+        )
+      }
+    }
+  }
+
+  @Nested
   inner class ScopedMustNotEscape {
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject assigning @Scoped variable to another local`() {
       val result = compile(

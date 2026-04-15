@@ -9,6 +9,8 @@ import org.jetbrains.kotlin.psi.KtElement
 object KraiiErrors : KtDiagnosticsContainer() {
 
   val SCOPED_MUST_BE_VAL by error0<KtElement>()
+  val SCOPED_MUST_NOT_ESCAPE by error0<KtElement>()
+  val SCOPED_MUST_NOT_ALIAS by error0<KtElement>()
 
   override fun getRendererFactory(): BaseDiagnosticRendererFactory =
     KraiiErrorMessages
@@ -21,6 +23,14 @@ private object KraiiErrorMessages : BaseDiagnosticRendererFactory() {
     it.put(
       KraiiErrors.SCOPED_MUST_BE_VAL,
       "@Scoped must be 'val', not 'var'.",
+    )
+    it.put(
+      KraiiErrors.SCOPED_MUST_NOT_ESCAPE,
+      "@Scoped variable must not escape its scope.",
+    )
+    it.put(
+      KraiiErrors.SCOPED_MUST_NOT_ALIAS,
+      "@Scoped variable must not be initialized from another @Scoped variable.",
     )
   }
 }
