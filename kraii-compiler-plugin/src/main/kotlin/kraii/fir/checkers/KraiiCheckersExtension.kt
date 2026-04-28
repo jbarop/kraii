@@ -17,7 +17,11 @@ class KraiiCheckersExtension(
   override val declarationCheckers: DeclarationCheckers =
     object : DeclarationCheckers() {
       override val propertyCheckers: Set<FirPropertyChecker> =
-        setOf(KraiiScopedPropertyChecker, KraiiScopedEscapeChecker)
+        setOf(
+          KraiiScopedPropertyChecker,
+          KraiiScopedEscapeChecker,
+          KraiiScopedLambdaCaptureChecker,
+        )
     }
 
   override val expressionCheckers: ExpressionCheckers =

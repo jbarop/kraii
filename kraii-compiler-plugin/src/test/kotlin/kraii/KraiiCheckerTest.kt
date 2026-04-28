@@ -2,7 +2,6 @@ package kraii
 
 import kraii.util.compile
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -277,7 +276,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject capturing @Scoped variable in a lambda`() {
       val result = compile(
