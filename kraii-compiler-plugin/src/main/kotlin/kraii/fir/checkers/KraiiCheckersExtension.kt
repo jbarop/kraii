@@ -4,8 +4,10 @@ import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.DeclarationCheckers
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirPropertyChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.ExpressionCheckers
+import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirExpressionChecker
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirReturnExpressionChecker
 import org.jetbrains.kotlin.fir.analysis.extensions.FirAdditionalCheckersExtension
+import org.jetbrains.kotlin.fir.expressions.FirVariableAssignment
 
 class KraiiCheckersExtension(
   session: FirSession,
@@ -22,5 +24,9 @@ class KraiiCheckersExtension(
       override val returnExpressionCheckers:
         Set<FirReturnExpressionChecker> =
         setOf(KraiiScopedReturnChecker)
+
+      override val variableAssignmentCheckers:
+        Set<FirExpressionChecker<FirVariableAssignment>> =
+        setOf(KraiiScopedAssignmentChecker)
     }
 }

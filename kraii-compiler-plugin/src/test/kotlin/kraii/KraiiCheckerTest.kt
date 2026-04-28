@@ -167,7 +167,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject assigning @Scoped variable to outer var`() {
       val result = compile(
@@ -191,7 +190,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject assigning @Scoped variable to class property`() {
       val result = compile(
