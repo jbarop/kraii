@@ -104,7 +104,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject returning @Scoped variable`() {
       val result = compile(
@@ -125,7 +124,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject returning @Scoped variable from if branch`() {
       val result = compile(
@@ -149,7 +147,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject returning @Scoped variable as expression body`() {
       val result = compile(
@@ -306,7 +303,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject returning @Scoped variable from lambda`() {
       val result = compile(

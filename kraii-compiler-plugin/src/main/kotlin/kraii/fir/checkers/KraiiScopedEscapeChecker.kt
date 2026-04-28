@@ -3,16 +3,11 @@ package kraii.fir.checkers
 import kraii.scopedClassId
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.diagnostics.reportOn
-import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirPropertyChecker
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
-import org.jetbrains.kotlin.fir.expressions.FirExpression
-import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
-import org.jetbrains.kotlin.fir.references.toResolvedPropertySymbol
-import org.jetbrains.kotlin.fir.symbols.impl.FirPropertySymbol
 
 /**
  * Rejects code where a `@Scoped` local variable escapes its scope
@@ -42,21 +37,4 @@ object KraiiScopedEscapeChecker :
 
     reporter.reportOn(initializer.source, error, context)
   }
-}
-
-/**
- * Returns `true` if the given expression is a direct reference to a
- * `@Scoped` local variable.
- */
-private fun referencesScopedLocal(
-  expression: FirExpression,
-  session: FirSession,
-): Boolean {
-  if (expression !is FirPropertyAccessExpression) return false
-
-  val symbol = expression.calleeReference.toResolvedPropertySymbol()
-    ?: return false
-
-  return symbol.isLocal &&
-    symbol.hasAnnotation(scopedClassId, session)
 }
