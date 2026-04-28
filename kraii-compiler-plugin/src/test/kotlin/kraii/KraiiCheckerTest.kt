@@ -214,7 +214,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject passing @Scoped variable as function argument`() {
       val result = compile(
@@ -237,7 +236,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject passing @Scoped variable as method argument`() {
       val result = compile(
@@ -259,7 +257,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("Checker not yet implemented")
     @Test
     fun `should reject passing @Scoped variable as constructor argument`() {
       val result = compile(
