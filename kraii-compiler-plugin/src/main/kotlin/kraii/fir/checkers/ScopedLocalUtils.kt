@@ -1,8 +1,10 @@
 package kraii.fir.checkers
 
 import kraii.scopedClassId
+import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.declarations.hasAnnotation
+import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirElvisExpression
 import org.jetbrains.kotlin.fir.expressions.FirExpression
@@ -10,6 +12,7 @@ import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
 import org.jetbrains.kotlin.fir.expressions.FirTypeOperatorCall
 import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
 import org.jetbrains.kotlin.fir.references.toResolvedPropertySymbol
+import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitorVoid
 
 /**
  * Returns `true` if the given expression references a `@Scoped` local
@@ -51,3 +54,39 @@ fun referencesScopedLocal(
 
     else -> false
   }
+
+/**
+ * Returns `true` if the lambda body captures any `@Scoped` local
+ * variable. Walks the FIR tree of the lambda body looking for
+ * `FirPropertyAccessExpression` nodes that reference `@Scoped`
+ * locals.
+ */
+fun lambdaCapturesScopedLocal(
+  lambda: FirAnonymousFunctionExpression,
+  session: FirSession,
+): Boolean {
+  var found = false
+  lambda.anonymousFunction.body?.accept(
+    object : FirDefaultVisitorVoid() {
+      override fun visitElement(element: FirElement) {
+        if (!found) element.acceptChildren(this)
+      }
+
+      override fun visitPropertyAccessExpression(
+        propertyAccessExpression: FirPropertyAccessExpression,
+      ) {
+        if (referencesScopedLocal(
+            propertyAccessExpression,
+            session,
+          )
+        ) {
+          found = true
+        }
+        if (!found) {
+          propertyAccessExpression.acceptChildren(this)
+        }
+      }
+    },
+  )
+  return found
+}

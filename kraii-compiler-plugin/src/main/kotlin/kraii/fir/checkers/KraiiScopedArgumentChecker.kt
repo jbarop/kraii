@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.diagnostics.reportOn
 import org.jetbrains.kotlin.fir.analysis.checkers.MppCheckerKind
 import org.jetbrains.kotlin.fir.analysis.checkers.context.CheckerContext
 import org.jetbrains.kotlin.fir.analysis.checkers.expression.FirFunctionCallChecker
+import org.jetbrains.kotlin.fir.expressions.FirAnonymousFunctionExpression
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
 
 /**
@@ -12,10 +13,12 @@ import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
  * by being passed as an argument to a function, method, or
  * constructor call.
  *
- * For example, `consume(resource)` or `list.add(resource)` where
- * `resource` is `@Scoped` is rejected because the callee could
- * store a reference to an object that will be closed by the
- * try-finally cleanup generated for the `@Scoped` variable.
+ * Catches two escape patterns:
+ * - Direct argument passing: `consume(resource)` or
+ *   `list.add(resource)` where `resource` is `@Scoped`.
+ * - Lambda argument capture: `lazy { resource }` or
+ *   `execute { resource.close() }` where the lambda captures a
+ *   reference to a `@Scoped` local.
  */
 object KraiiScopedArgumentChecker :
   FirFunctionCallChecker(MppCheckerKind.Common) {
@@ -23,13 +26,24 @@ object KraiiScopedArgumentChecker :
   context(context: CheckerContext, reporter: DiagnosticReporter)
   override fun check(expression: FirFunctionCall) {
     for (argument in expression.argumentList.arguments) {
-      if (!referencesScopedLocal(argument, context.session)) continue
+      if (referencesScopedLocal(argument, context.session)) {
+        reporter.reportOn(
+          argument.source,
+          KraiiErrors.SCOPED_MUST_NOT_ESCAPE,
+          context,
+        )
+        continue
+      }
 
-      reporter.reportOn(
-        argument.source,
-        KraiiErrors.SCOPED_MUST_NOT_ESCAPE,
-        context,
-      )
+      val lambda =
+        argument as? FirAnonymousFunctionExpression ?: continue
+      if (lambdaCapturesScopedLocal(lambda, context.session)) {
+        reporter.reportOn(
+          argument.source,
+          KraiiErrors.SCOPED_MUST_NOT_ESCAPE,
+          context,
+        )
+      }
     }
   }
 }

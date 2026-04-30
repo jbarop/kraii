@@ -184,7 +184,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("lambda argument capture")
     @Test
     fun `should reject capture in lazy delegate`() {
       val result = compile(
@@ -443,7 +442,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("lambda argument capture")
     @Test
     fun `should reject capture in lambda argument`() {
       val result = compile(
@@ -466,7 +464,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("lambda argument capture")
     @Test
     fun `should reject capture in forEach lambda`() {
       val result = compile(
