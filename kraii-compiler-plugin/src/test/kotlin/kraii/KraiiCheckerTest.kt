@@ -104,7 +104,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("shallow check")
     @Test
     fun `should reject escape through if expression`() {
       val result = compile(
@@ -125,7 +124,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("shallow check")
     @Test
     fun `should reject escape through elvis operator`() {
       val result = compile(
@@ -146,7 +144,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("shallow check")
     @Test
     fun `should reject escape through type cast`() {
       val result = compile(
@@ -167,7 +164,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("shallow check")
     @Test
     fun `should reject escape through safe cast`() {
       val result = compile(
@@ -294,7 +290,6 @@ class KraiiCheckerTest {
       }
     }
 
-    @Disabled("shallow check")
     @Test
     fun `should reject return through when expression`() {
       val result = compile(
