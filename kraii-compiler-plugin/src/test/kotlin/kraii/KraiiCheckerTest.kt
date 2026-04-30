@@ -2,6 +2,7 @@ package kraii
 
 import kraii.util.compile
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -103,6 +104,111 @@ class KraiiCheckerTest {
       }
     }
 
+    @Disabled("shallow check")
+    @Test
+    fun `should reject escape through if expression`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked = if (true) resource else null
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("shallow check")
+    @Test
+    fun `should reject escape through elvis operator`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked: AutoCloseable = null ?: resource
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("shallow check")
+    @Test
+    fun `should reject escape through type cast`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked = resource as AutoCloseable
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("shallow check")
+    @Test
+    fun `should reject escape through safe cast`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked = resource as? AutoCloseable
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("lambda argument capture")
+    @Test
+    fun `should reject capture in lazy delegate`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked by lazy { resource }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
     @Test
     fun `should reject returning @Scoped variable`() {
       val result = compile(
@@ -156,6 +262,52 @@ class KraiiCheckerTest {
         fun createResource(): AutoCloseable = run {
           @Scoped val resource = NoopResource()
           resource
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Test
+    fun `should reject returning @Scoped variable from lambda`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test(): AutoCloseable {
+          return run {
+            @Scoped val resource = NoopResource()
+            resource
+          }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("shallow check")
+    @Test
+    fun `should reject return through when expression`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun get(flag: Boolean): AutoCloseable {
+          @Scoped val resource = NoopResource()
+          return when {
+            flag -> resource
+            else -> resource
+          }
         }
         """.trimIndent(),
       )
@@ -296,18 +448,130 @@ class KraiiCheckerTest {
       }
     }
 
+    @Disabled("lambda argument capture")
     @Test
-    fun `should reject returning @Scoped variable from lambda`() {
+    fun `should reject capture in lambda argument`() {
       val result = compile(
         """
         import kraii.api.Scoped
         import kraii.util.NoopResource
 
-        fun test(): AutoCloseable {
-          return run {
-            @Scoped val resource = NoopResource()
-            resource
-          }
+        fun execute(block: () -> Unit) { block() }
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          execute { resource.close() }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("lambda argument capture")
+    @Test
+    fun `should reject capture in forEach lambda`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun consume(resource: AutoCloseable) {}
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          listOf(1, 2, 3).forEach { consume(resource) }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("no taint propagation")
+    @Test
+    fun `should reject escape through let`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked = resource.let { it }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("no taint propagation")
+    @Test
+    fun `should reject escape through let with named param`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun consume(resource: AutoCloseable) {}
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          resource.let { ref -> consume(ref) }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("no taint propagation")
+    @Test
+    fun `should reject escape via also`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun consume(resource: AutoCloseable) {}
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          resource.also { consume(it) }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isFalse()
+      assertThat(result.errors).anyMatch {
+        it.contains("@Scoped variable must not escape its scope")
+      }
+    }
+
+    @Disabled("no taint propagation")
+    @Test
+    fun `should reject escape through run`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+        import kraii.util.NoopResource
+
+        fun test() {
+          @Scoped val resource = NoopResource()
+          val leaked = resource.run { this }
         }
         """.trimIndent(),
       )
