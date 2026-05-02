@@ -663,6 +663,27 @@ class KraiiCheckerTest {
     }
 
     @Test
+    fun `should allow method call on @Scoped in inline lambda`() {
+      val result = compile(
+        """
+        import kraii.api.Scoped
+
+        class MyResource : AutoCloseable {
+          override fun close() {}
+          fun doWork() {}
+        }
+
+        fun test() {
+          @Scoped val resource = MyResource()
+          repeat(3) { resource.doWork() }
+        }
+        """.trimIndent(),
+      )
+
+      assertThat(result.success).isTrue()
+    }
+
+    @Test
     fun `should allow @Scoped variable as extension receiver`() {
       val result = compile(
         """
