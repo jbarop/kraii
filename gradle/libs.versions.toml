@@ -4,7 +4,7 @@ ktlint-plugin = "14.2.0"
 ktlint-engine = "1.8.0"
 junit = "5.13.3"
 assertj = "3.27.7"
-gson = "2.13.2"
+gson = "2.14.0"
 
 [libraries]
 assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
